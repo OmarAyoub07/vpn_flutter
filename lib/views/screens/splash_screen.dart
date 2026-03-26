@@ -1,9 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:ui' as ui;
 
-import '../../main.dart';
+import '../../core/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import 'consent_screen.dart';
 import 'home_screen.dart';
@@ -58,14 +57,6 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
-    String? savedLang = prefs.getString('language');
-    if (savedLang == null) {
-      final deviceLocale = ui.PlatformDispatcher.instance.locale;
-      savedLang = deviceLocale.languageCode == 'ar' ? 'ar' : 'en';
-      await prefs.setString('language', savedLang);
-      if (mounted) MyApp.setLocale(context, Locale(savedLang));
-    }
-
     final hasAgreed = prefs.getBool('hasAgreed') ?? false;
     if (!mounted) return;
 
@@ -92,6 +83,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: AnimatedBuilder(
         animation: _particleController,
@@ -138,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 32),
                     Text(
-                      'FREE FAST VPN',
+                      l10n.get('splash_tagline'),
                       style: TextStyle(
                         color: AppColors.iceWhite.withValues(alpha: 0.7),
                         fontSize: 14,

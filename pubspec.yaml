@@ -52,3 +52,18 @@ flutter:
     - family: Inter
       fonts:
         - asset: assets/fonts/InterVariable.ttf
+    - family: NotoSansArabic
+      fonts:
+        - asset: assets/fonts/fallback/NotoSansArabic.ttf
+    - family: NotoSansDevanagari
+      fonts:
+        - asset: assets/fonts/fallback/NotoSansDevanagari.ttf
+    - family: NotoSansBengali
+      fonts:
+        - asset: assets/fonts/fallback/NotoSansBengali.ttf
+    - family: NotoSansThai
+      fonts:
+        - asset: assets/fonts/fallback/NotoSansThai.ttf
+    - family: NotoSansKR
+      fonts:
+        - asset: assets/fonts/fallback/NotoSansKR.ttf

@@ -3,12 +3,13 @@ import 'package:wireguard_flutter/wireguard_flutter_platform_interface.dart';
 
 import '../models/server.dart';
 import '../models/vpn_config.dart';
-import '../services/api_service.dart';
+import '../services/api_client.dart';
+import '../services/server_service.dart';
 
 enum VpnConnectionState { disconnected, connecting, connected, disconnecting }
 
 class HomeModel {
-  final ApiService _api = ApiService();
+  final ServerService _api = ServerService();
   final WireGuardFlutterInterface _wireguard = WireGuardFlutter.instance;
 
   List<Server> servers = [];
@@ -18,10 +19,10 @@ class HomeModel {
   VpnConnectionState connectionState = VpnConnectionState.disconnected;
   String? lastError;
 
-  Future<List<Server>> fetchServers() async {
+  Future<List<Server>> fetchServers({String? langCode}) async {
     lastError = null;
     try {
-      final allServers = await _api.getServers();
+      final allServers = await _api.getServers(lang: langCode);
       servers = allServers.where((s) => s.isActive).toList();
       return servers;
     } on ApiException catch (e) {
@@ -120,7 +121,7 @@ PersistentKeepalive = 25
     }
   }
 
-  void selectServer(Server server) {
+  void selectServer(Server? server) {
     selectedServer = server;
   }
 

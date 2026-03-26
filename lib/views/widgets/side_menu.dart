@@ -15,9 +15,9 @@ class SideMenu extends StatelessWidget {
   void _onShareApp(BuildContext context) async {
     Navigator.pop(context);
     try {
+      final l10n = AppLocalizations.of(context);
       // ignore: deprecated_member_use
-      await Share.share(
-          'Check out this Fast VPN app! https://example.com/store');
+      await Share.share(l10n.get('share_text'));
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -30,6 +30,7 @@ class SideMenu extends StatelessWidget {
   }
 
   void _onRateUs(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     Navigator.pop(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -43,11 +44,11 @@ class SideMenu extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         title: Text(
-          'Do you like Fast VPN?',
+          l10n.get('do_you_like_vpn'),
           style: theme.textTheme.titleLarge,
         ),
         content: Text(
-          'Your feedback helps us improve',
+          l10n.get('feedback_helps_improve'),
           style: theme.textTheme.bodyMedium,
         ),
         actions: [
@@ -60,13 +61,13 @@ class SideMenu extends StatelessWidget {
               );
             },
             child: Text(
-              'Not really',
+              l10n.get('not_really'),
               style: TextStyle(color: AppColors.ash),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Love it!'),
+            child: Text(l10n.get('love_it')),
           ),
         ],
       ),
@@ -125,7 +126,7 @@ class SideMenu extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Secure • Fast • Private',
+                        l10n.get('secure_fast_private'),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.ash,
                           letterSpacing: 0.5,
@@ -150,7 +151,7 @@ class SideMenu extends StatelessWidget {
                 ),
                 _MenuItem(
                   icon: Icons.language_rounded,
-                  label: l10n.get('language'),
+                  label: l10n.get('language_label'),
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(

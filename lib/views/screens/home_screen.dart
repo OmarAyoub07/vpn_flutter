@@ -21,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen>
     with TickerProviderStateMixin {
   final HomeController _controller = HomeController();
   late AnimationController _bgController;
+  String? _currentLang;
 
   @override
   void initState() {
@@ -37,7 +38,16 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat(reverse: true);
-    _controller.loadServers();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final lang = AppLocalizations.of(context).languageCode;
+    if (lang != _currentLang) {
+      _currentLang = lang;
+      _controller.loadServers(langCode: lang);
+    }
   }
 
   @override
@@ -137,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Text(
                   connected
                       ? l10n.get('success_connected')
-                      : 'VPN connection safely terminated.',
+                      : l10n.get('vpn_disconnected_message'),
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -188,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _selectServer() {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -217,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
               const SizedBox(height: 20),
-              Text('Select Server', style: theme.textTheme.titleLarge),
+              Text(l10n.get('select_server'), style: theme.textTheme.titleLarge),
               const SizedBox(height: 16),
               if (_controller.isLoadingServers)
                 const Padding(
@@ -228,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: Text(
-                    'No servers available',
+                    l10n.get('no_servers_available'),
                     style: theme.textTheme.bodyMedium,
                   ),
                 )
@@ -273,9 +284,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _addTime(int minutes) {
     _controller.addTime(minutes);
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('+$minutes minutes added'),
+        content: Text(l10n.get('minutes_added').replaceAll('{minutes}', '$minutes')),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         backgroundColor: AppColors.mintTeal,
@@ -473,7 +485,7 @@ class _HomeScreenState extends State<HomeScreen>
                               Expanded(
                                 child: _buildMetricTile(
                                   icon: Icons.arrow_downward_rounded,
-                                  label: 'Download',
+                                  label: l10n.get('download'),
                                   value: _controller.downloadSpeed,
                                   color: AppColors.mintTeal,
                                 ),
@@ -482,7 +494,7 @@ class _HomeScreenState extends State<HomeScreen>
                               Expanded(
                                 child: _buildMetricTile(
                                   icon: Icons.arrow_upward_rounded,
-                                  label: 'Upload',
+                                  label: l10n.get('upload'),
                                   value: _controller.uploadSpeed,
                                   color: AppColors.primaryBlue,
                                 ),
@@ -515,7 +527,7 @@ class _HomeScreenState extends State<HomeScreen>
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Enjoying the speed?',
+                                        l10n.get('enjoying_speed'),
                                         style: theme.textTheme.titleSmall
                                             ?.copyWith(
                                           color:
@@ -523,7 +535,7 @@ class _HomeScreenState extends State<HomeScreen>
                                         ),
                                       ),
                                       Text(
-                                        'Tap to rate us!',
+                                        l10n.get('tap_to_rate'),
                                         style: theme.textTheme.bodySmall,
                                       ),
                                     ],

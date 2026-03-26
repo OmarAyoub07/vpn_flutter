@@ -15,25 +15,25 @@ class FeedbackScreen extends StatefulWidget {
 class _FeedbackScreenState extends State<FeedbackScreen> {
   int _currentStep = 0;
 
-  final List<String> _features = [
-    'One tap connect',
-    'Multiple servers',
-    'Safe connection',
-    'Simple & clean UI',
-    'Bugs',
-    'Ads',
+  final List<String> _featureKeys = [
+    'one_tap_connect',
+    'multiple_servers_option',
+    'safe_connection',
+    'simple_clean_ui',
+    'bugs',
+    'ads',
   ];
   final Set<String> _selectedFeatures = {};
   final TextEditingController _descController = TextEditingController();
   final List<XFile> _attachments = [];
   final ImagePicker _picker = ImagePicker();
 
-  final List<String> _improvements = [
-    'VPN Connection',
-    'Global Server',
-    'VPN connection speed',
-    'Secure connection',
-    'User-friendly UI',
+  final List<String> _improvementKeys = [
+    'vpn_connection',
+    'global_server',
+    'vpn_connection_speed',
+    'secure_connection',
+    'user_friendly_ui',
   ];
   final Set<String> _selectedImprovements = {};
 
@@ -48,10 +48,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   }
 
   Future<void> _pickImages() async {
+    final l10n = AppLocalizations.of(context);
     if (_attachments.length >= 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Max 10 attachments allowed.'),
+          content: Text(l10n.get('max_attachments')),
           behavior: SnackBarBehavior.floating,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -73,9 +74,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   }
 
   void _submitFeedback() {
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Thank you for your feedback!'),
+        content: Text(l10n.get('feedback_thank_you')),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.mintTeal,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -143,7 +145,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
                 child: Row(
                   children: List.generate(3, (i) {
-                    final labels = ['Details', 'Improve', 'Submit'];
+                    final labelKeys = ['details', 'improve', 'submit'];
                     final isActive = i <= _currentStep;
                     final isCurrent = i == _currentStep;
                     return Expanded(
@@ -195,7 +197,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                labels[i],
+                                l10n.get(labelKeys[i]),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: isCurrent
@@ -222,10 +224,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: _currentStep == 0
-                        ? _buildStep1(theme)
+                        ? _buildStep1(theme, l10n)
                         : _currentStep == 1
-                            ? _buildStep2(theme)
-                            : _buildStep3(theme),
+                            ? _buildStep2(theme, l10n)
+                            : _buildStep3(theme, l10n),
                   ),
                 ),
               ),
@@ -238,7 +240,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: _goBack,
-                          child: const Text('Back'),
+                          child: Text(l10n.get('back')),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -266,8 +268,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                           ),
-                          child:
-                              Text(_currentStep == 2 ? 'Submit' : 'Next'),
+                          child: Text(
+                              _currentStep == 2
+                                  ? l10n.get('submit')
+                                  : l10n.get('next')),
                         ),
                       ),
                     ),
@@ -281,24 +285,25 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     );
   }
 
-  Widget _buildStep1(ThemeData theme) {
+  Widget _buildStep1(ThemeData theme, AppLocalizations l10n) {
     return Column(
       key: const ValueKey('step1'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
         Text(
-          'Select a feature to provide feedback',
+          l10n.get('select_feature_feedback'),
           style: theme.textTheme.titleMedium,
         ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _features.map((feature) {
-            final isSelected = _selectedFeatures.contains(feature);
+          children: _featureKeys.map((key) {
+            final label = l10n.get(key);
+            final isSelected = _selectedFeatures.contains(key);
             return FilterChip(
-              label: Text(feature),
+              label: Text(label),
               selected: isSelected,
               selectedColor: AppColors.mintTeal.withValues(alpha: 0.15),
               checkmarkColor: AppColors.mintTeal,
@@ -310,9 +315,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               onSelected: (selected) {
                 setState(() {
                   if (selected) {
-                    _selectedFeatures.add(feature);
+                    _selectedFeatures.add(key);
                   } else {
-                    _selectedFeatures.remove(feature);
+                    _selectedFeatures.remove(key);
                   }
                 });
               },
@@ -323,22 +328,24 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         TextField(
           controller: _descController,
           maxLines: 4,
-          decoration: const InputDecoration(
-            hintText: 'Detailed description (Optional)',
+          decoration: InputDecoration(
+            hintText: l10n.get('detailed_description'),
           ),
         ),
         const SizedBox(height: 24),
         Row(
           children: [
             Text(
-              'Attachments (${_attachments.length}/10)',
+              l10n
+                  .get('attachments_label')
+                  .replaceAll('{count}', '${_attachments.length}'),
               style: theme.textTheme.bodyMedium,
             ),
             const Spacer(),
             TextButton.icon(
               onPressed: _pickImages,
               icon: const Icon(Icons.attach_file_rounded, size: 18),
-              label: const Text('Add File'),
+              label: Text(l10n.get('add_file')),
             ),
           ],
         ),
@@ -399,16 +406,18 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     );
   }
 
-  Widget _buildStep2(ThemeData theme) {
+  Widget _buildStep2(ThemeData theme, AppLocalizations l10n) {
     return Column(
       key: const ValueKey('step2'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
-        Text('What could be improved?', style: theme.textTheme.titleMedium),
+        Text(l10n.get('what_could_be_improved'),
+            style: theme.textTheme.titleMedium),
         const SizedBox(height: 16),
-        ..._improvements.map((item) {
-          final isSelected = _selectedImprovements.contains(item);
+        ..._improvementKeys.map((key) {
+          final label = l10n.get(key);
+          final isSelected = _selectedImprovements.contains(key);
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: ZenGlassCard(
@@ -418,16 +427,16 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   ? AppColors.mintTeal.withValues(alpha: 0.5)
                   : null,
               child: CheckboxListTile(
-                title: Text(item, style: theme.textTheme.bodyLarge),
+                title: Text(label, style: theme.textTheme.bodyLarge),
                 value: isSelected,
                 activeColor: AppColors.mintTeal,
                 checkColor: AppColors.deepNavy,
                 onChanged: (bool? value) {
                   setState(() {
                     if (value == true) {
-                      _selectedImprovements.add(item);
+                      _selectedImprovements.add(key);
                     } else {
-                      _selectedImprovements.remove(item);
+                      _selectedImprovements.remove(key);
                     }
                   });
                 },
@@ -442,24 +451,24 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     );
   }
 
-  Widget _buildStep3(ThemeData theme) {
+  Widget _buildStep3(ThemeData theme, AppLocalizations l10n) {
     return Column(
       key: const ValueKey('step3'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
-        Text('Final Thoughts', style: theme.textTheme.titleMedium),
+        Text(l10n.get('final_thoughts'), style: theme.textTheme.titleMedium),
         const SizedBox(height: 16),
         TextField(
           controller: _finalThoughtsController,
           maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: 'Add any additional thoughts...',
+          decoration: InputDecoration(
+            hintText: l10n.get('additional_thoughts'),
           ),
         ),
         const SizedBox(height: 20),
         Text(
-          'We appreciate your feedback and use it to strictly improve our VPN application.',
+          l10n.get('feedback_closing'),
           style: theme.textTheme.bodySmall?.copyWith(
             color: AppColors.ash,
           ),

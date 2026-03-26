@@ -112,7 +112,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No connection history yet.',
+                              l10n.get('no_history'),
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 color: AppColors.ash,
                               ),

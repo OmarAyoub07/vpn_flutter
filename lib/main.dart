@@ -1,29 +1,34 @@
-// Entry point of the Flutter application. Bootstraps routing and themes.
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'theme/app_theme.dart';
 import 'core/app_localizations.dart';
+import 'theme/app_theme.dart';
 import 'views/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final prefs = await SharedPreferences.getInstance();
-  final String? savedLang = prefs.getString('language');
+  final savedLang = prefs.getString('language');
+  final code =
+      savedLang ?? ui.PlatformDispatcher.instance.locale.languageCode;
 
-  runApp(MyApp(savedLang: savedLang));
+  final localizations = await AppLocalizations.fetchLabels(code);
+  await prefs.setString('language', localizations.languageCode);
+
+  runApp(MyApp(initialLocalizations: localizations));
 }
 
 class MyApp extends StatefulWidget {
-  final String? savedLang;
+  final AppLocalizations initialLocalizations;
 
-  const MyApp({super.key, this.savedLang});
+  const MyApp({super.key, required this.initialLocalizations});
 
-  static void setLocale(BuildContext context, Locale newLocale) {
-    _MyAppState? state = context.findAncestorStateOfType<_MyAppState>();
-    state?.setLocale(newLocale);
+  static void setLocalizations(
+      BuildContext context, AppLocalizations l10n) {
+    context.findAncestorStateOfType<_MyAppState>()?._setLocalizations(l10n);
   }
 
   @override
@@ -31,38 +36,38 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  Locale? _locale;
+  late AppLocalizations _localizations;
 
   @override
   void initState() {
     super.initState();
-    if (widget.savedLang != null) {
-      _locale = Locale(widget.savedLang!);
-    }
+    _localizations = widget.initialLocalizations;
   }
 
-  void setLocale(Locale locale) {
-    setState(() {
-      _locale = locale;
-    });
+  void _setLocalizations(AppLocalizations l10n) {
+    setState(() => _localizations = l10n);
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'VPN App',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // Supports both light/dark system settings
-      locale: _locale,
-      supportedLocales: const [Locale('en', ''), Locale('ar', '')],
-      localizationsDelegates: const [
-        AppLocalizationsDelegate(),
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: const SplashScreen(),
+    return LocalizationProvider(
+      localizations: _localizations,
+      child: MaterialApp(
+        title: 'VPN App',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        locale: Locale(_localizations.languageCode),
+        supportedLocales: [Locale(_localizations.languageCode)],
+        localeResolutionCallback: (locale, supportedLocales) =>
+            Locale(_localizations.languageCode),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: const SplashScreen(),
+      ),
     );
   }
 }

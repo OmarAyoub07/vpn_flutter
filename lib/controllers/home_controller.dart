@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../models/home_model.dart';
 import '../models/server.dart';
-import '../services/api_service.dart';
+import '../services/api_client.dart';
 
 class HomeController extends ChangeNotifier {
   final HomeModel _model = HomeModel();
@@ -27,14 +27,24 @@ class HomeController extends ChangeNotifier {
   String downloadSpeed = '0.0 Mbps';
   String uploadSpeed = '0.0 Mbps';
 
-  Future<void> loadServers() async {
+  Future<void> loadServers({String? langCode}) async {
     isLoadingServers = true;
     _model.lastError = null;
     notifyListeners();
 
+    final previousId = _model.selectedServer?.id;
+
     try {
-      await _model.fetchServers();
-      if (_model.selectedServer == null && _model.servers.isNotEmpty) {
+      await _model.fetchServers(langCode: langCode);
+
+      // Re-match the selected server from the fresh list so the
+      // displayed name reflects the new language.
+      if (previousId != null) {
+        final match = _model.servers
+            .where((s) => s.id == previousId)
+            .firstOrNull;
+        _model.selectServer(match ?? _model.servers.firstOrNull);
+      } else if (_model.servers.isNotEmpty) {
         _model.selectServer(_model.servers.first);
       }
     } on ApiException {

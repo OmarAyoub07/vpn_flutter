@@ -5,6 +5,13 @@ class AppTheme {
   AppTheme._();
 
   static const _fontFamily = 'Inter';
+  static const _fallbackFonts = [
+    'NotoSansArabic',
+    'NotoSansDevanagari',
+    'NotoSansBengali',
+    'NotoSansThai',
+    'NotoSansKR',
+  ];
   static final _borderRadius = BorderRadius.circular(16);
   static final _pillRadius = BorderRadius.circular(28);
 
@@ -12,6 +19,7 @@ class AppTheme {
     return TextTheme(
       displayLarge: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 48,
         fontWeight: FontWeight.w700,
         color: base,
@@ -20,6 +28,7 @@ class AppTheme {
       ),
       displayMedium: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 36,
         fontWeight: FontWeight.w700,
         color: base,
@@ -27,36 +36,42 @@ class AppTheme {
       ),
       headlineLarge: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 28,
         fontWeight: FontWeight.w600,
         color: base,
       ),
       headlineMedium: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 24,
         fontWeight: FontWeight.w600,
         color: base,
       ),
       titleLarge: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: base,
       ),
       titleMedium: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: base,
       ),
       titleSmall: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: muted,
       ),
       bodyLarge: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 16,
         fontWeight: FontWeight.w400,
         color: base,
@@ -64,6 +79,7 @@ class AppTheme {
       ),
       bodyMedium: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: muted,
@@ -71,6 +87,7 @@ class AppTheme {
       ),
       bodySmall: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: muted,
@@ -78,6 +95,7 @@ class AppTheme {
       ),
       labelLarge: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: base,
@@ -85,6 +103,7 @@ class AppTheme {
       ),
       labelMedium: TextStyle(
         fontFamily: _fontFamily,
+        fontFamilyFallback: _fallbackFonts,
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: muted,
