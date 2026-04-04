@@ -1,4 +1,4 @@
-import 'package:country_flags/country_flags.dart';
+import '../widgets/flag_emoji.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -238,14 +238,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                                 horizontal: 16,
                                 vertical: 2,
                               ),
-                              leading: CountryFlag.fromCountryCode(
-                                flagCode,
-                                theme: const ImageTheme(
-                                  height: 24,
-                                  width: 34,
-                                  shape: RoundedRectangle(4),
-                                ),
-                              ),
+                              leading: FlagEmoji(countryCode: flagCode, size: 22),
                               title: Text(
                                 name,
                                 style: theme.textTheme.bodyLarge?.copyWith(

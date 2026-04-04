@@ -1,4 +1,4 @@
-import 'package:country_flags/country_flags.dart';
+import '../widgets/flag_emoji.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/app_localizations.dart';
@@ -226,14 +226,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                     color: AppColors.mintTeal.withValues(alpha: 0.1),
                   ),
                   child: Center(
-                    child: CountryFlag.fromCountryCode(
-                      item.serverCountryFlag,
-                      theme: const ImageTheme(
-                        height: 24,
-                        width: 32,
-                        shape: RoundedRectangle(3),
-                      ),
-                    ),
+                    child: FlagEmoji(countryCode: item.serverCountryFlag, size: 22),
                   ),
                 ),
                 const SizedBox(width: 16),

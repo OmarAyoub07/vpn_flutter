@@ -1,5 +1,5 @@
 import 'dart:ui' as ui;
-import 'package:country_flags/country_flags.dart';
+import '../widgets/flag_emoji.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -299,14 +299,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
-      leading: CountryFlag.fromCountryCode(
-        server.countryFlag,
-        theme: const ImageTheme(
-          height: 28,
-          width: 40,
-          shape: RoundedRectangle(4),
-        ),
-      ),
+      leading: FlagEmoji(countryCode: server.countryFlag, size: 28),
       title: Text(server.name, style: theme.textTheme.bodyLarge),
       subtitle: Text(
         '${server.activeConnections} active',
