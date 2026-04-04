@@ -1,51 +1,64 @@
-# app
+# Free Fast VPN — Flutter App
 
-A new Flutter project.
+## Prerequisites
 
-## Getting Started
+- Flutter SDK `>=3.11.0`
+- The backend API running and accessible
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
-## Flutter Native Splash
+## Setup
 
 ```bash
-flutter pub add flutter_native_splash
+flutter pub get
 ```
 
-```yml
-flutter_native_splash:
-  # Set the background color of the splash screen
-  color: "#FFFFFF" # You can use any hex color here
-  
-  # Path to your logo
-  image: assets/splash_logo.png
-  
-  # Ensure the splash screen is applied to both platforms
-  android: true
-  ios: true
-  
-  # Android 12+ requires a specific configuration for the background
-  android_12:
-    color: "#FFFFFF"
-    image: assets/splash_logo.png
-```
+## Running in Development
 
 ```bash
-dart run flutter_native_splash:create
+flutter run --dart-define=BASE_URL=http://your-server:8000/api
 ```
 
+`BASE_URL` is the backend API address including the `/api` path. It is required and baked into the binary at compile time.
 
-## To build optimized android apk
+## Building for Release
+
+### Android APK
+
+**Requirements:** Android SDK, Java 17+
+
 ```bash
-flutter build apk --release --split-per-abi --target-platform android-arm64   --split-debug-info=build/debug-info --obfuscate --tree-shake-icons
+flutter build apk --release \
+  --split-per-abi \
+  --target-platform android-arm64 \
+  --split-debug-info=build/debug-info \
+  --obfuscate \
+  --tree-shake-icons \
+  --dart-define=BASE_URL=http://your-server:8000/api
 ```
+
+Output: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`
+
+To include all architectures, remove `--split-per-abi` and `--target-platform`.
+
+### Windows
+
+**Requirements:** Windows 10/11, Visual Studio 2022 with "Desktop development with C++" workload. Must be run on a Windows machine.
+
+```bash
+flutter build windows --release \
+  --dart-define=BASE_URL=http://your-server:8000/api
+```
+
+Output: `build/windows/x64/runner/Release/`
+
+### iOS
+
+**Requirements:** macOS, Xcode 15+, Apple Developer account. Must be run on macOS.
+
+```bash
+flutter build ipa --release \
+  --dart-define=BASE_URL=http://your-server:8000/api
+```
+
+Output: `build/ios/ipa/app.ipa`
+
+Code signing must be configured in Xcode before building.
