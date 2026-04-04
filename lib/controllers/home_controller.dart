@@ -1,12 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import '../models/app_config.dart';
+import '../models/app_user.dart';
 import '../models/home_model.dart';
+import '../models/rewarded_ad_tier.dart';
 import '../models/server.dart';
 import '../services/api_client.dart';
+import '../services/user_service.dart';
 
 class HomeController extends ChangeNotifier {
-  final HomeModel _model = HomeModel();
+  final HomeModel _model;
+  final UserService _userService = UserService();
+  final String deviceId;
+  final AppConfigResponse? appConfig;
+  final List<RewardedAdTier> adTiers;
 
   bool get isConnected =>
       _model.connectionState == VpnConnectionState.connected;
@@ -21,11 +29,25 @@ class HomeController extends ChangeNotifier {
 
   bool isLoadingServers = false;
 
-  int remainingSeconds = 1 * 60;
+  int remainingSeconds;
   Timer? _timer;
+  int _ticksSinceSync = 0;
 
   String downloadSpeed = '0.0 Mbps';
   String uploadSpeed = '0.0 Mbps';
+
+  HomeController({
+    required this.deviceId,
+    this.appConfig,
+    AppUser? appUser,
+  })  : _model = HomeModel(deviceId: deviceId, dns: appConfig?.dns ?? '1.1.1.3, 1.0.0.3'),
+        adTiers = appConfig?.rewardedAdTiers ?? [],
+        remainingSeconds = appUser?.remainingSeconds ??
+            appConfig?.initialRemainingSeconds ??
+            300 {
+    // Request VPN permission early so the dialog appears before user taps Connect
+    _model.ensureVpnPermission();
+  }
 
   Future<void> loadServers({String? langCode}) async {
     isLoadingServers = true;
@@ -37,8 +59,6 @@ class HomeController extends ChangeNotifier {
     try {
       await _model.fetchServers(langCode: langCode);
 
-      // Re-match the selected server from the fresh list so the
-      // displayed name reflects the new language.
       if (previousId != null) {
         final match = _model.servers
             .where((s) => s.id == previousId)
@@ -61,13 +81,21 @@ class HomeController extends ChangeNotifier {
   }
 
   void startTimer(VoidCallback onTick, VoidCallback onDisconnect) {
+    _ticksSinceSync = 0;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (remainingSeconds > 0) {
         remainingSeconds--;
+        _ticksSinceSync++;
         downloadSpeed = '${10 + (remainingSeconds % 50)} Mbps';
         uploadSpeed = '${5 + (remainingSeconds % 20)} Mbps';
         onTick();
         notifyListeners();
+
+        // Sync remaining time to backend every 30 seconds
+        if (_ticksSinceSync >= 30) {
+          _ticksSinceSync = 0;
+          _syncTimeToBackend();
+        }
       } else {
         disconnect();
         onDisconnect();
@@ -124,7 +152,31 @@ class HomeController extends ChangeNotifier {
       // still mark as disconnected even if API call fails
     }
 
+    // Persist remaining time to backend
+    _syncTimeToBackend();
+
     notifyListeners();
+  }
+
+  Future<void> _syncTimeToBackend() async {
+    try {
+      await _userService.syncTime(deviceId, remainingSeconds);
+    } catch (_) {
+      // Silent fail — will sync next time
+    }
+  }
+
+  /// Claim reward from backend after watching ads.
+  Future<void> claimReward(RewardedAdTier tier) async {
+    try {
+      final updatedUser = await _userService.claimReward(deviceId, tier.id);
+      remainingSeconds = updatedUser.remainingSeconds;
+      notifyListeners();
+    } on ApiException {
+      // Fallback: add time locally if backend is unreachable
+      remainingSeconds += tier.rewardMinutes * 60;
+      notifyListeners();
+    }
   }
 
   void addTime(int minutes) {
@@ -132,10 +184,16 @@ class HomeController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateRemainingSeconds(int seconds) {
+    remainingSeconds = seconds;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
     _model.dispose();
+    _userService.dispose();
     super.dispose();
   }
 }

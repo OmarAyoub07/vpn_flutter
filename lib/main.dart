@@ -4,6 +4,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/app_localizations.dart';
+import 'models/app_config.dart';
+import 'models/app_user.dart';
+import 'services/device_service.dart';
+import 'services/user_service.dart';
 import 'theme/app_theme.dart';
 import 'views/screens/splash_screen.dart';
 
@@ -18,13 +22,48 @@ void main() async {
   final localizations = await AppLocalizations.fetchLabels(code);
   await prefs.setString('language', localizations.languageCode);
 
-  runApp(MyApp(initialLocalizations: localizations));
+  // Device identification & config
+  final deviceId = await DeviceService.getDeviceId();
+  final userService = UserService();
+  final isFirstLaunch = !prefs.containsKey('device_registered');
+
+  AppUser? appUser;
+  AppConfigResponse? appConfig;
+  try {
+    appConfig = await userService.getConfig();
+    if (!isFirstLaunch) {
+      // Returning user — register/fetch immediately
+      appUser = await userService.registerDevice(deviceId);
+    }
+    // First launch: defer registration until after referral code prompt
+  } catch (_) {
+    // Fallback: app works offline with defaults
+  }
+
+  runApp(MyApp(
+    initialLocalizations: localizations,
+    deviceId: deviceId,
+    appUser: appUser,
+    appConfig: appConfig,
+    isFirstLaunch: isFirstLaunch,
+  ));
 }
 
 class MyApp extends StatefulWidget {
   final AppLocalizations initialLocalizations;
+  final String deviceId;
+  final AppUser? appUser;
+  final AppConfigResponse? appConfig;
+  final bool isFirstLaunch;
 
-  const MyApp({super.key, required this.initialLocalizations});
+  const MyApp({
+    super.key,
+    required this.initialLocalizations,
+    required this.deviceId,
+    this.appUser,
+    this.appConfig,
+    this.isFirstLaunch = false,
+  });
 
   static void setLocalizations(
       BuildContext context, AppLocalizations l10n) {
@@ -50,24 +89,62 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return LocalizationProvider(
-      localizations: _localizations,
-      child: MaterialApp(
-        title: 'VPN App',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        locale: Locale(_localizations.languageCode),
-        supportedLocales: [Locale(_localizations.languageCode)],
-        localeResolutionCallback: (locale, supportedLocales) =>
-            Locale(_localizations.languageCode),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: const SplashScreen(),
+    return AppSession(
+      deviceId: widget.deviceId,
+      appUser: widget.appUser,
+      appConfig: widget.appConfig,
+      isFirstLaunch: widget.isFirstLaunch,
+      child: LocalizationProvider(
+        localizations: _localizations,
+        child: MaterialApp(
+          title: 'VPN App',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.system,
+          locale: Locale(_localizations.languageCode),
+          supportedLocales: [Locale(_localizations.languageCode)],
+          localeResolutionCallback: (locale, supportedLocales) =>
+              Locale(_localizations.languageCode),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const SplashScreen(),
+        ),
       ),
     );
+  }
+}
+
+/// InheritedWidget to provide session data down the tree.
+class AppSession extends InheritedWidget {
+  final String deviceId;
+  final AppUser? appUser;
+  final AppConfigResponse? appConfig;
+  final bool isFirstLaunch;
+
+  const AppSession({
+    super.key,
+    required this.deviceId,
+    this.appUser,
+    this.appConfig,
+    this.isFirstLaunch = false,
+    required super.child,
+  });
+
+  static AppSession of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<AppSession>()!;
+  }
+
+  static AppSession? maybeOf(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<AppSession>();
+  }
+
+  @override
+  bool updateShouldNotify(AppSession oldWidget) {
+    return deviceId != oldWidget.deviceId ||
+        appUser != oldWidget.appUser ||
+        appConfig != oldWidget.appConfig;
   }
 }

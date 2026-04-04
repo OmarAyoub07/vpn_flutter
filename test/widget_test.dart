@@ -8,6 +8,7 @@ void main() {
     await tester.pumpWidget(
       MyApp(
         initialLocalizations: AppLocalizations('en', {'app_name': 'VPN'}),
+        deviceId: 'test-device-id',
       ),
     );
     await tester.pump();

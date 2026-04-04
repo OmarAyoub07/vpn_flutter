@@ -1,10 +1,15 @@
 import 'dart:ui' as ui;
 import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_localizations.dart';
 import '../../controllers/home_controller.dart';
+import '../../main.dart';
+import '../../models/rewarded_ad_tier.dart';
 import '../../models/server.dart';
+import '../../services/ad_service.dart';
+import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
 import '../widgets/side_menu.dart';
 import '../widgets/zen_glass_card.dart';
@@ -19,21 +24,26 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with TickerProviderStateMixin {
-  final HomeController _controller = HomeController();
+  HomeController? _controller;
+  AdService? _adService;
   late AnimationController _bgController;
   String? _currentLang;
+  bool _initialized = false;
+  String? _lastShownError;
+
+  void _onControllerChanged() {
+    if (!mounted) return;
+    setState(() {});
+    final error = _controller?.errorMessage;
+    if (error != null && error != _lastShownError) {
+      _lastShownError = error;
+      _showError(error);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(() {
-      if (mounted) {
-        setState(() {});
-        if (_controller.errorMessage != null) {
-          _showError(_controller.errorMessage!);
-        }
-      }
-    });
     _bgController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 8),
@@ -43,16 +53,46 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+
+    if (!_initialized) {
+      final session = AppSession.of(context);
+      _controller = HomeController(
+        deviceId: session.deviceId,
+        appConfig: session.appConfig,
+        appUser: session.appUser,
+      );
+      _controller!.addListener(_onControllerChanged);
+
+      if (session.appConfig != null) {
+        _adService = AdService(config: session.appConfig!);
+        _adService!.onNativeAdStateChanged = () {
+          if (mounted) setState(() {});
+        };
+        _adService!.initialize();
+      }
+
+      _initialized = true;
+
+      if (session.isFirstLaunch) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showReferralInputDialog();
+        });
+      }
+    }
+
     final lang = AppLocalizations.of(context).languageCode;
     if (lang != _currentLang) {
       _currentLang = lang;
-      _controller.loadServers(langCode: lang);
+      _controller!.loadServers(langCode: lang);
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.removeListener(_onControllerChanged);
+    _controller?.dispose();
+    _adService?.onNativeAdStateChanged = null;
+    _adService?.dispose();
     _bgController.dispose();
     super.dispose();
   }
@@ -69,8 +109,8 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  void _onConnect() {
-    _controller.connect(
+  void _onConnect() async {
+    _controller!.connect(
       () {
         if (mounted) _showConnectionModal(true);
       },
@@ -82,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _onDisconnect() async {
-    await _controller.disconnect();
+    await _controller!.disconnect();
     if (mounted) _showConnectionModal(false);
   }
 
@@ -107,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(28, 20, 28, 32),
+            padding: EdgeInsets.fromLTRB(28, 20, 28, MediaQuery.of(ctx).padding.bottom + 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -206,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final serverList = _controller.servers;
+        final serverList = _controller!.servers;
         return Container(
           decoration: BoxDecoration(
             color: isDark
@@ -230,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen>
               const SizedBox(height: 20),
               Text(l10n.get('select_server'), style: theme.textTheme.titleLarge),
               const SizedBox(height: 16),
-              if (_controller.isLoadingServers)
+              if (_controller!.isLoadingServers)
                 const Padding(
                   padding: EdgeInsets.all(24),
                   child: CircularProgressIndicator(),
@@ -245,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen>
                 )
               else
                 ...serverList.map((s) => _serverTile(ctx, s)),
-              const SizedBox(height: 20),
+              SizedBox(height: MediaQuery.of(ctx).padding.bottom + 20),
             ],
           ),
         );
@@ -254,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _serverTile(BuildContext ctx, Server server) {
-    final isSelected = _controller.selectedServer?.id == server.id;
+    final isSelected = _controller!.selectedServer?.id == server.id;
     final theme = Theme.of(context);
 
     return ListTile(
@@ -276,14 +316,304 @@ class _HomeScreenState extends State<HomeScreen>
           ? const Icon(Icons.check_circle_rounded, color: AppColors.mintTeal)
           : null,
       onTap: () {
-        _controller.selectServer(server);
+        _controller!.selectServer(server);
         Navigator.pop(ctx);
       },
     );
   }
 
-  void _addTime(int minutes) {
-    _controller.addTime(minutes);
+  Future<void> _watchAds(RewardedAdTier? tier, int fallbackMinutes) async {
+    final adsToWatch = tier?.adsToWatch ?? 2;
+    final rewardMinutes = tier?.rewardMinutes ?? fallbackMinutes;
+
+    if (_adService == null || !(_adService!.config.rewardedAdsEnabled)) {
+      // No ad service or ads disabled — claim directly
+      if (tier != null) {
+        await _controller!.claimReward(tier);
+      } else {
+        _controller!.addTime(rewardMinutes);
+      }
+      _showRewardSnackbar(rewardMinutes);
+      return;
+    }
+
+    // Show progress dialog
+    final progressNotifier = ValueNotifier<int>(0);
+    _showAdProgressDialog(progressNotifier, adsToWatch, rewardMinutes);
+
+    final completed = await _adService!.showRewardedAds(
+      adsToWatch,
+      onProgress: (done, total) {
+        progressNotifier.value = done;
+      },
+    );
+
+    // Dismiss the progress dialog
+    if (mounted && Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+
+    if (completed) {
+      if (tier != null) {
+        await _controller!.claimReward(tier);
+      } else {
+        _controller!.addTime(rewardMinutes);
+      }
+      _showRewardSnackbar(rewardMinutes);
+    } else {
+      // User cancelled or ad failed
+      _showAdCancelledSnackbar(progressNotifier.value, adsToWatch);
+    }
+
+    progressNotifier.dispose();
+  }
+
+  void _showAdProgressDialog(
+    ValueNotifier<int> progressNotifier,
+    int totalAds,
+    int rewardMinutes,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return ValueListenableBuilder<int>(
+          valueListenable: progressNotifier,
+          builder: (context, completed, _) {
+            return AlertDialog(
+              backgroundColor:
+                  isDark ? AppColors.primaryBlue : AppColors.pureWhite,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 8),
+                  // Circular progress
+                  SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: CircularProgressIndicator(
+                            value: totalAds > 0 ? completed / totalAds : 0,
+                            strokeWidth: 6,
+                            backgroundColor: AppColors.ash.withValues(alpha: 0.15),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppColors.mintTeal,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '$completed/$totalAds',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    completed < totalAds
+                        ? l10n.get('watching_ad')
+                            .replaceAll('{current}', '${completed + 1}')
+                            .replaceAll('{total}', '$totalAds')
+                        : l10n.get('all_ads_watched'),
+                    style: theme.textTheme.titleSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.get('reward_amount')
+                        .replaceAll('{minutes}', '$rewardMinutes'),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.mintTeal,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (completed < totalAds)
+                    Text(
+                      l10n.get('watch_all_to_earn')
+                          .replaceAll('{total}', '$totalAds'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.ash,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAdCancelledSnackbar(int watched, int total) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context).get('ad_cancelled')
+              .replaceAll('{watched}', '$watched')
+              .replaceAll('{total}', '$total'),
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: AppColors.ash,
+      ),
+    );
+  }
+
+  /// Build the ad button label from the template, filling {count} and {minutes}
+  /// from the tier config. Falls back to defaults if no tier exists.
+  String _adButtonLabel(AppLocalizations l10n, int tierIndex, int defaultCount, int defaultMinutes) {
+    final tiers = _controller?.adTiers ?? [];
+    final count = tierIndex < tiers.length ? tiers[tierIndex].adsToWatch : defaultCount;
+    final minutes = tierIndex < tiers.length ? tiers[tierIndex].rewardMinutes : defaultMinutes;
+    return l10n.get('watch_ads_template')
+        .replaceAll('{count}', '$count')
+        .replaceAll('{minutes}', '$minutes');
+  }
+
+  void _showReferralInputDialog() {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final codeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppColors.primaryBlue : AppColors.pureWhite,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(l10n.get('have_referral_code'), style: theme.textTheme.titleLarge),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.get('referral_hint'),
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: codeController,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  letterSpacing: 4,
+                  fontWeight: FontWeight.w700,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'A3X9K2',
+                  counterText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                codeController.dispose();
+                Navigator.pop(ctx);
+                _registerDevice(null);
+              },
+              child: Text(l10n.get('skip'), style: TextStyle(color: AppColors.ash)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final code = codeController.text.trim();
+                codeController.dispose();
+                Navigator.pop(ctx);
+                await _registerDevice(code.length == 6 ? code : null);
+              },
+              child: Text(l10n.get('submit')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _registerDevice(String? referralCode) async {
+    final l10n = AppLocalizations.of(context);
+    final session = AppSession.of(context);
+    try {
+      final userService = UserService();
+      final result = await userService.registerDevice(
+        session.deviceId,
+        referralCode: referralCode,
+      );
+      // Update remaining time from backend
+      _controller?.updateRemainingSeconds(result.remainingSeconds);
+
+      // Save registration state
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('device_registered', true);
+
+      if (mounted && referralCode != null) {
+        final status = result.referralStatus;
+        if (status == 'rewarded') {
+          final bonus = (session.appConfig?.referralRewardSeconds ?? 3600) ~/ 60;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.get('referral_applied').replaceAll('{minutes}', '$bonus')),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: AppColors.mintTeal,
+            ),
+          );
+        } else if (status == 'already_referred') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.get('already_referred')),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: AppColors.ash,
+            ),
+          );
+        } else if (status == 'invalid_code') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.get('invalid_referral')),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        } else if (status == 'self_referral') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.get('self_referral')),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      // Registration failed — will retry on next app launch
+    }
+  }
+
+  void _showRewardSnackbar(int minutes) {
     final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -297,6 +627,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_controller == null) return const SizedBox.shrink();
+
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -389,7 +721,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        _controller.selectedServer?.name ?? 'Auto',
+                                        _controller!.selectedServer?.name ?? 'Auto',
                                         style: theme.textTheme.titleMedium,
                                       ),
                                     ],
@@ -413,7 +745,7 @@ class _HomeScreenState extends State<HomeScreen>
 
                         // Timer
                         Text(
-                          _formatTime(_controller.remainingSeconds),
+                          _formatTime(_controller!.remainingSeconds),
                           style: theme.textTheme.displayLarge?.copyWith(
                             fontFeatures: [
                               const ui.FontFeature.tabularFigures()
@@ -431,12 +763,12 @@ class _HomeScreenState extends State<HomeScreen>
 
                         // Connect orb
                         PulseOrb(
-                          isConnected: _controller.isConnected,
-                          isConnecting: _controller.isConnecting,
-                          onTap: _controller.isConnected
+                          isConnected: _controller!.isConnected,
+                          isConnecting: _controller!.isConnecting,
+                          onTap: _controller!.isConnected
                               ? _onDisconnect
                               : _onConnect,
-                          label: _controller.isConnected
+                          label: _controller!.isConnected
                               ? l10n.get('disconnect')
                               : l10n.get('connect'),
                           size: 200,
@@ -444,19 +776,24 @@ class _HomeScreenState extends State<HomeScreen>
 
                         const SizedBox(height: 40),
 
-                        if (!_controller.isConnected &&
-                            !_controller.isConnecting) ...[
+                        if (!_controller!.isConnected &&
+                            !_controller!.isConnecting) ...[
                           Row(
                             children: [
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: () => _addTime(15),
+                                  onPressed: () => _watchAds(
+                                    _controller!.adTiers.isNotEmpty
+                                        ? _controller!.adTiers.first
+                                        : null,
+                                    15,
+                                  ),
                                   icon: const Icon(
                                     Icons.play_circle_outline_rounded,
                                     size: 18,
                                   ),
                                   label: Text(
-                                    l10n.get('watch_ads_15'),
+                                    _adButtonLabel(l10n, 0, 2, 15),
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(fontSize: 12),
                                   ),
@@ -465,13 +802,18 @@ class _HomeScreenState extends State<HomeScreen>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: () => _addTime(35),
+                                  onPressed: () => _watchAds(
+                                    _controller!.adTiers.length > 1
+                                        ? _controller!.adTiers[1]
+                                        : null,
+                                    35,
+                                  ),
                                   icon: const Icon(
                                     Icons.play_circle_outline_rounded,
                                     size: 18,
                                   ),
                                   label: Text(
-                                    l10n.get('watch_ads_35'),
+                                    _adButtonLabel(l10n, 1, 4, 35),
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(fontSize: 12),
                                   ),
@@ -479,14 +821,14 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                             ],
                           ),
-                        ] else if (_controller.isConnected) ...[
+                        ] else if (_controller!.isConnected) ...[
                           Row(
                             children: [
                               Expanded(
                                 child: _buildMetricTile(
                                   icon: Icons.arrow_downward_rounded,
                                   label: l10n.get('download'),
-                                  value: _controller.downloadSpeed,
+                                  value: _controller!.downloadSpeed,
                                   color: AppColors.mintTeal,
                                 ),
                               ),
@@ -495,7 +837,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 child: _buildMetricTile(
                                   icon: Icons.arrow_upward_rounded,
                                   label: l10n.get('upload'),
-                                  value: _controller.uploadSpeed,
+                                  value: _controller!.uploadSpeed,
                                   color: AppColors.primaryBlue,
                                 ),
                               ),
@@ -550,33 +892,9 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         ],
                         const SizedBox(height: 20),
+                        // Native ad
+                        _buildNativeAd(isDark),
                       ],
-                    ),
-                  ),
-                ),
-              ),
-              // Ad placeholder
-              Container(
-                width: double.infinity,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.04)
-                      : Colors.black.withValues(alpha: 0.04),
-                  border: Border(
-                    top: BorderSide(
-                      color: isDark
-                          ? AppColors.glassBorder
-                          : AppColors.pearl.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    'Banner Ad Placeholder',
-                    style: TextStyle(
-                      color: AppColors.ash.withValues(alpha: 0.5),
-                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -584,6 +902,19 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNativeAd(bool isDark) {
+    final nativeAdWidget = _adService?.getNativeAdWidget();
+    if (nativeAdWidget == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: nativeAdWidget,
       ),
     );
   }

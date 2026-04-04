@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_localizations.dart';
 import '../../main.dart';
 import '../../theme/app_colors.dart';
+import '../widgets/banner_ad_widget.dart';
 
 class LanguageScreen extends StatefulWidget {
   const LanguageScreen({super.key});
@@ -278,6 +279,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                         },
                       ),
               ),
+              const BannerAdWidget(),
             ],
           ),
         ),

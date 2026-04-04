@@ -14,6 +14,7 @@ class ApiException implements Exception {
 
 class ApiClient {
   final http.Client _client;
+  static const _timeout = Duration(seconds: 15);
 
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
@@ -33,13 +34,13 @@ class ApiClient {
     late http.Response response;
     try {
       if (method == 'GET') {
-        response = await _client.get(uri, headers: headers);
+        response = await _client.get(uri, headers: headers).timeout(_timeout);
       } else {
         response = await _client.post(
           uri,
           headers: headers,
           body: body != null ? jsonEncode(body) : null,
-        );
+        ).timeout(_timeout);
       }
     } catch (e) {
       throw ApiException(0, 'Network error: $e');
@@ -54,6 +55,8 @@ class ApiClient {
     switch (response.statusCode) {
       case 404:
         throw ApiException(404, errorBody ?? 'Not found');
+      case 429:
+        throw ApiException(429, errorBody ?? 'Too many requests');
       case 500:
         throw ApiException(500, errorBody ?? 'Server error');
       case 502:

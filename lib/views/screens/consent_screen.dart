@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../widgets/zen_glass_card.dart';
 import 'features_carousel.dart';
+import 'legal_content_screen.dart';
 
 class ConsentScreen extends StatefulWidget {
   const ConsentScreen({super.key});
@@ -61,11 +61,10 @@ class _ConsentScreenState extends State<ConsentScreen>
     }
   }
 
-  Future<void> _launchUrl(String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(url)) {
-      debugPrint('Could not launch $url');
-    }
+  void _openLegalContent(BuildContext context, LegalContentType type) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => LegalContentScreen(type: type)),
+    );
   }
 
   @override
@@ -125,8 +124,10 @@ class _ConsentScreenState extends State<ConsentScreen>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               TextButton(
-                                onPressed: () =>
-                                    _launchUrl('https://example.com/privacy'),
+                                onPressed: () => _openLegalContent(
+                                  context,
+                                  LegalContentType.privacyPolicy,
+                                ),
                                 child: Text(
                                   l10n.get('privacy_policy'),
                                   style: theme.textTheme.bodySmall?.copyWith(
@@ -145,8 +146,10 @@ class _ConsentScreenState extends State<ConsentScreen>
                                 ),
                               ),
                               TextButton(
-                                onPressed: () =>
-                                    _launchUrl('https://example.com/terms'),
+                                onPressed: () => _openLegalContent(
+                                  context,
+                                  LegalContentType.termsOfUse,
+                                ),
                                 child: Text(
                                   l10n.get('terms_of_service'),
                                   style: theme.textTheme.bodySmall?.copyWith(

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/app_localizations.dart';
+import '../../main.dart';
+import '../../services/feedback_service.dart';
 import '../../theme/app_colors.dart';
+import '../widgets/banner_ad_widget.dart';
 import '../widgets/zen_glass_card.dart';
 
 class FeedbackScreen extends StatefulWidget {
@@ -49,10 +52,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   Future<void> _pickImages() async {
     final l10n = AppLocalizations.of(context);
-    if (_attachments.length >= 10) {
+    final maxFiles = AppSession.of(context).appConfig?.maxAttachmentsPerFeedback ?? 2;
+    if (_attachments.length >= maxFiles) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.get('max_attachments')),
+          content: Text(l10n.get('max_attachments').replaceAll('{max}', '$maxFiles')),
           behavior: SnackBarBehavior.floating,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -63,7 +67,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     final List<XFile> selectedImages = await _picker.pickMultiImage();
     if (selectedImages.isNotEmpty) {
       setState(() {
-        final remainingSlots = 10 - _attachments.length;
+        final remainingSlots = 2 - _attachments.length;
         _attachments.addAll(selectedImages.take(remainingSlots));
       });
     }
@@ -73,17 +77,48 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     setState(() => _attachments.removeAt(index));
   }
 
-  void _submitFeedback() {
+  bool _isSubmitting = false;
+
+  Future<void> _submitFeedback() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+
     final l10n = AppLocalizations.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.get('feedback_thank_you')),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.mintTeal,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+    final deviceId = AppSession.maybeOf(context)?.deviceId;
+
+    final service = FeedbackService();
+    final success = await service.submitFeedback(
+      deviceId: deviceId,
+      selectedFeatures: _selectedFeatures.toList(),
+      description: _descController.text.trim(),
+      selectedImprovements: _selectedImprovements.toList(),
+      finalThoughts: _finalThoughtsController.text.trim(),
+      attachments: _attachments,
     );
-    Navigator.of(context).pop();
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.get('feedback_thank_you')),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.mintTeal,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to submit feedback. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.redAccent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   void _goNext() {
@@ -263,21 +298,31 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: _goNext,
+                          onPressed: _isSubmitting ? null : _goNext,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                           ),
-                          child: Text(
-                              _currentStep == 2
-                                  ? l10n.get('submit')
-                                  : l10n.get('next')),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.deepNavy,
+                                  ),
+                                )
+                              : Text(
+                                  _currentStep == 2
+                                      ? l10n.get('submit')
+                                      : l10n.get('next')),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
+              const BannerAdWidget(),
             ],
           ),
         ),
@@ -338,7 +383,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             Text(
               l10n
                   .get('attachments_label')
-                  .replaceAll('{count}', '${_attachments.length}'),
+                  .replaceAll('{count}', '${_attachments.length}')
+                  .replaceAll('{max}', '${AppSession.of(context).appConfig?.maxAttachmentsPerFeedback ?? 2}'),
               style: theme.textTheme.bodyMedium,
             ),
             const Spacer(),

@@ -25,25 +25,37 @@ class ServerService {
   Future<ConnectionStatus> connect(
     int serverId,
     String clientPublicKey,
-    String assignedIp,
-  ) async {
+    String assignedIp, {
+    String? deviceId,
+  }) async {
+    final body = <String, dynamic>{
+      'client_public_key': clientPublicKey,
+      'assigned_ip': assignedIp,
+    };
+    if (deviceId != null) body['device_id'] = deviceId;
+
     final response = await _client.post(
       '/servers/$serverId/connect/',
-      body: {
-        'client_public_key': clientPublicKey,
-        'assigned_ip': assignedIp,
-      },
+      body: body,
     );
     return ConnectionStatus.fromJson(jsonDecode(response.body));
   }
 
   Future<ConnectionStatus> disconnect(
     int serverId,
-    String clientPublicKey,
-  ) async {
+    String clientPublicKey, {
+    String? deviceId,
+    int? connectionId,
+  }) async {
+    final body = <String, dynamic>{
+      'client_public_key': clientPublicKey,
+    };
+    if (deviceId != null) body['device_id'] = deviceId;
+    if (connectionId != null) body['connection_id'] = connectionId;
+
     final response = await _client.post(
       '/servers/$serverId/disconnect/',
-      body: {'client_public_key': clientPublicKey},
+      body: body,
     );
     return ConnectionStatus.fromJson(jsonDecode(response.body));
   }
