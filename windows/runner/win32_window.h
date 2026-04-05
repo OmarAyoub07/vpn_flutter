@@ -2,6 +2,7 @@
 #define RUNNER_WIN32_WINDOW_H_
 
 #include <windows.h>
+#include <shellapi.h>
 
 #include <functional>
 #include <memory>
@@ -97,6 +98,14 @@ class Win32Window {
 
   // window handle for hosted content.
   HWND child_content_ = nullptr;
+
+  // System tray icon data.
+  NOTIFYICONDATA nid_{};
+  bool tray_initialized_ = false;
+  void InitTrayIcon();
+
+ protected:
+  void RemoveTrayIcon();
 };
 
 #endif  // RUNNER_WIN32_WINDOW_H_

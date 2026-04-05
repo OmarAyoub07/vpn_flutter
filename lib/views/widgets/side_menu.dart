@@ -1,5 +1,9 @@
+import 'dart:io' show Platform;
 import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_localizations.dart';
@@ -10,28 +14,58 @@ import '../screens/language_screen.dart';
 import '../screens/feedback_screen.dart';
 import '../screens/legal_content_screen.dart';
 
-import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
-
 class SideMenu extends StatelessWidget {
   const SideMenu({super.key});
 
-  void _onShareApp(BuildContext context) async {
-    Navigator.pop(context);
-    try {
-      final l10n = AppLocalizations.of(context);
-      final session = AppSession.of(context);
-      final storeUrl = session.appConfig?.storeUrl ?? '';
-      final text = l10n.get('share_text').replaceAll('{store_url}', storeUrl);
-      // ignore: deprecated_member_use
-      await Share.share(text);
-    } catch (e) {
+  static bool get _isDesktop {
+    if (kIsWeb) return false;
+    return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  }
+
+  /// Share text via the native share sheet, with clipboard fallback on desktop.
+  Future<void> _shareText(BuildContext context, String text) async {
+    if (_isDesktop) {
+      await Clipboard.setData(ClipboardData(text: text));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sharing is not supported on this device: $e')),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).get('share_text_copied')),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: AppColors.mintTeal,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+    try {
+      // ignore: deprecated_member_use
+      await Share.share(text);
+    } catch (_) {
+      // Fallback to clipboard if native share fails
+      await Clipboard.setData(ClipboardData(text: text));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).get('share_text_copied')),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: AppColors.mintTeal,
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
+  }
+
+  void _onShareApp(BuildContext context) async {
+    Navigator.pop(context);
+    final l10n = AppLocalizations.of(context);
+    final session = AppSession.of(context);
+    final storeUrl = session.appConfig?.storeUrl ?? '';
+    final text = l10n.get('share_text').replaceAll('{store_url}', storeUrl);
+    await _shareText(context, text);
   }
 
   void _showReferralCode(BuildContext context) {
@@ -45,83 +79,126 @@ class SideMenu extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final rewardMinutes = (session.appConfig?.referralRewardSeconds ?? 3600) ~/ 60;
 
+    String _buildShareText() {
+      final storeUrl = session.appConfig?.storeUrl ?? '';
+      return l10n.get('referral_share_text')
+          .replaceAll('{code}', referralCode)
+          .replaceAll('{minutes}', '$rewardMinutes')
+          .replaceAll('{store_url}', storeUrl);
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDark ? AppColors.primaryBlue : AppColors.pureWhite,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(l10n.get('your_referral_code')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Share your code with friends. When they install the app '
-              'and enter your code, you get $rewardMinutes minutes free!',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: AppColors.mintTeal.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.mintTeal.withValues(alpha: 0.3),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.get('referral_description')
+                    .replaceAll('{minutes}', '$rewardMinutes'),
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.mintTeal.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.mintTeal.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: SelectableText(
+                        referralCode,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(Icons.copy_rounded, size: 20),
+                      tooltip: l10n.get('code_copied'),
+                      color: AppColors.mintTeal,
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: referralCode));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.get('code_copied')),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            backgroundColor: AppColors.mintTeal,
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    referralCode,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 4,
+              if (_isDesktop) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: _buildShareText()));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.get('share_text_copied')),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            backgroundColor: AppColors.mintTeal,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.content_copy_rounded, size: 18),
+                    label: Text(l10n.get('copy_invite_message')),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.mintTeal,
+                      side: BorderSide(color: AppColors.mintTeal.withValues(alpha: 0.4)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  IconButton(
-                    icon: const Icon(Icons.copy_rounded, size: 20),
-                    color: AppColors.mintTeal,
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: referralCode));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.get('code_copied')),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          backgroundColor: AppColors.mintTeal,
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.get('close')),
           ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              final storeUrl = session.appConfig?.storeUrl ?? '';
-              final text = l10n.get('referral_share_text')
-                  .replaceAll('{code}', referralCode)
-                  .replaceAll('{minutes}', '$rewardMinutes')
-                  .replaceAll('{store_url}', storeUrl);
-              // ignore: deprecated_member_use
-              Share.share(text);
-            },
-            icon: const Icon(Icons.share_rounded, size: 18),
-            label: Text(l10n.get('share_app')),
-          ),
+          if (!_isDesktop)
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await _shareText(context, _buildShareText());
+              },
+              icon: const Icon(Icons.share_rounded, size: 18),
+              label: Text(l10n.get('share_app')),
+            ),
         ],
       ),
     );
@@ -129,9 +206,11 @@ class SideMenu extends StatelessWidget {
 
   void _onRateUs(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    Navigator.pop(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final ratingUrl = AppSession.of(context).appConfig?.ratingUrl ?? '';
+
+    Navigator.pop(context); // close drawer
 
     showDialog(
       context: context,
@@ -166,11 +245,8 @@ class SideMenu extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // Redirect to the store rating page
-              final session = AppSession.of(context);
-              final storeUrl = session.appConfig?.storeUrl ?? '';
-              if (storeUrl.isNotEmpty) {
-                launchUrl(Uri.parse(storeUrl),
+              if (ratingUrl.isNotEmpty) {
+                launchUrl(Uri.parse(ratingUrl),
                     mode: LaunchMode.externalApplication);
               }
             },

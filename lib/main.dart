@@ -1,4 +1,6 @@
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +12,7 @@ import 'services/device_service.dart';
 import 'services/user_service.dart';
 import 'theme/app_theme.dart';
 import 'views/screens/splash_screen.dart';
+import 'views/widgets/window_title_bar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,28 +73,38 @@ class MyApp extends StatefulWidget {
     context.findAncestorStateOfType<_MyAppState>()?._setLocalizations(l10n);
   }
 
+  static void setAppUser(BuildContext context, AppUser user) {
+    context.findAncestorStateOfType<_MyAppState>()?._setAppUser(user);
+  }
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
   late AppLocalizations _localizations;
+  AppUser? _appUser;
 
   @override
   void initState() {
     super.initState();
     _localizations = widget.initialLocalizations;
+    _appUser = widget.appUser;
   }
 
   void _setLocalizations(AppLocalizations l10n) {
     setState(() => _localizations = l10n);
   }
 
+  void _setAppUser(AppUser user) {
+    setState(() => _appUser = user);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppSession(
       deviceId: widget.deviceId,
-      appUser: widget.appUser,
+      appUser: _appUser,
       appConfig: widget.appConfig,
       isFirstLaunch: widget.isFirstLaunch,
       child: LocalizationProvider(
@@ -110,6 +123,17 @@ class _MyAppState extends State<MyApp> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          builder: (context, child) {
+            if (!kIsWeb && Platform.isWindows) {
+              return Column(
+                children: [
+                  const WindowTitleBar(),
+                  Expanded(child: child ?? const SizedBox.shrink()),
+                ],
+              );
+            }
+            return child ?? const SizedBox.shrink();
+          },
           home: const SplashScreen(),
         ),
       ),

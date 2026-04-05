@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Renders a country flag as an emoji from a 2-letter country code.
-/// Zero-size alternative to the country_flags package (saves ~2.5 MB).
+/// Renders a country flag from an image URL, with emoji fallback.
 class FlagEmoji extends StatelessWidget {
   final String countryCode;
+  final String? imageUrl;
   final double size;
 
-  const FlagEmoji({super.key, required this.countryCode, this.size = 24});
+  const FlagEmoji({
+    super.key,
+    required this.countryCode,
+    this.imageUrl,
+    this.size = 24,
+  });
 
   static String toEmoji(String code) {
     if (code.length != 2) return '';
@@ -19,6 +24,21 @@ class FlagEmoji extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          imageUrl!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _emojiFallback(),
+        ),
+      );
+    }
+    return _emojiFallback();
+  }
+
+  Widget _emojiFallback() {
     return Text(
       toEmoji(countryCode),
       style: TextStyle(fontSize: size),

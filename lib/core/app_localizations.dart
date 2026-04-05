@@ -9,9 +9,17 @@ class AppLocalizations {
   final String languageCode;
   final Map<String, String> _labels;
 
+  /// Fallback strings for keys that may not yet exist on the backend.
+  static const _defaults = {
+    'share_text_copied': 'Copied to clipboard!',
+    'referral_description': 'Share your code with friends. When they install '
+        'the app and enter your code, you both get {minutes} minutes free!',
+    'copy_invite_message': 'Copy invite message',
+  };
+
   AppLocalizations(this.languageCode, this._labels);
 
-  String get(String key) => _labels[key] ?? key;
+  String get(String key) => _labels[key] ?? _defaults[key] ?? key;
 
   static AppLocalizations of(BuildContext context) {
     return context

@@ -51,6 +51,40 @@ class AppConfigResponse {
     return googlePlayUrl; // Android and fallback
   }
 
+  /// Returns a deep link that opens the store's rating/review dialog directly.
+  String get ratingUrl {
+    if (Platform.isAndroid) {
+      // market:// scheme opens the Play Store app directly.
+      final uri = Uri.tryParse(googlePlayUrl);
+      final id = uri?.queryParameters['id'];
+      if (id != null) return 'market://details?id=$id';
+      return googlePlayUrl;
+    }
+    if (Platform.isIOS || Platform.isMacOS) {
+      // action=write-review opens the review dialog.
+      final uri = Uri.tryParse(appleStoreUrl);
+      if (uri != null) {
+        return uri.replace(queryParameters: {
+          ...uri.queryParameters,
+          'action': 'write-review',
+        }).toString();
+      }
+      return appleStoreUrl;
+    }
+    if (Platform.isWindows) {
+      // ms-windows-store://review/ opens the review dialog.
+      final uri = Uri.tryParse(microsoftStoreUrl);
+      final segments = uri?.pathSegments ?? [];
+      // Extract product ID from URLs like https://apps.microsoft.com/detail/{id}
+      final productId = segments.isNotEmpty ? segments.last : '';
+      if (productId.isNotEmpty) {
+        return 'ms-windows-store://review/?ProductId=$productId';
+      }
+      return microsoftStoreUrl;
+    }
+    return storeUrl;
+  }
+
   factory AppConfigResponse.fromJson(Map<String, dynamic> json) {
     return AppConfigResponse(
       initialRemainingSeconds: json['initial_remaining_seconds'] ?? 60,

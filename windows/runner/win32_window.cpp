@@ -2,8 +2,16 @@
 
 #include <dwmapi.h>
 #include <flutter_windows.h>
+#include <shellapi.h>
 
 #include "resource.h"
+
+#define WM_TRAYICON      (WM_USER + 1)
+#define IDM_TRAY_SHOW    3001
+#define IDM_TRAY_EXIT    3002
+#define IDM_TRAY_CONNECT 3003
+#define IDM_TRAY_DISCONNECT 3004
+#define IDM_HIDE_TO_TRAY 3005
 
 namespace {
 
@@ -134,8 +142,11 @@ bool Win32Window::Create(const std::wstring& title,
   UINT dpi = FlutterDesktopGetDpiForMonitor(monitor);
   double scale_factor = dpi / 96.0;
 
-  HWND window = CreateWindow(
-      window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
+  // Frameless fixed-size window — custom title bar is drawn by Flutter.
+  const DWORD style = WS_POPUP | WS_SYSMENU | WS_MINIMIZEBOX;
+  HWND window = CreateWindowEx(
+      WS_EX_APPWINDOW,
+      window_class, title.c_str(), style,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
       nullptr, nullptr, GetModuleHandle(nullptr), this);
@@ -143,6 +154,10 @@ bool Win32Window::Create(const std::wstring& title,
   if (!window) {
     return false;
   }
+
+  // Add a subtle drop shadow via DWM.
+  MARGINS margins = {1, 1, 1, 1};
+  DwmExtendFrameIntoClientArea(window, &margins);
 
   UpdateTheme(window);
 
@@ -179,7 +194,12 @@ Win32Window::MessageHandler(HWND hwnd,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
   switch (message) {
+    case WM_CREATE:
+      InitTrayIcon();
+      break;
+
     case WM_DESTROY:
+      RemoveTrayIcon();
       window_handle_ = nullptr;
       Destroy();
       if (quit_on_close_) {
@@ -200,7 +220,6 @@ Win32Window::MessageHandler(HWND hwnd,
     case WM_SIZE: {
       RECT rect = GetClientArea();
       if (child_content_ != nullptr) {
-        // Size and position the child window.
         MoveWindow(child_content_, rect.left, rect.top, rect.right - rect.left,
                    rect.bottom - rect.top, TRUE);
       }
@@ -215,6 +234,40 @@ Win32Window::MessageHandler(HWND hwnd,
 
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
+      return 0;
+
+    case WM_TRAYICON:
+      if (lparam == WM_LBUTTONUP || lparam == WM_LBUTTONDBLCLK) {
+        ShowWindow(hwnd, SW_SHOW);
+        SetForegroundWindow(hwnd);
+      } else if (lparam == WM_RBUTTONUP) {
+        POINT pt;
+        GetCursorPos(&pt);
+        HMENU menu = CreatePopupMenu();
+        AppendMenu(menu, MF_STRING, IDM_TRAY_SHOW, L"Show");
+        AppendMenu(menu, MF_SEPARATOR, 0, nullptr);
+        AppendMenu(menu, MF_STRING, IDM_TRAY_CONNECT, L"Connect");
+        AppendMenu(menu, MF_STRING, IDM_TRAY_DISCONNECT, L"Disconnect");
+        AppendMenu(menu, MF_SEPARATOR, 0, nullptr);
+        AppendMenu(menu, MF_STRING, IDM_TRAY_EXIT, L"Exit");
+        SetForegroundWindow(hwnd);
+        TrackPopupMenu(menu, TPM_BOTTOMALIGN | TPM_LEFTALIGN,
+                       pt.x, pt.y, 0, hwnd, nullptr);
+        DestroyMenu(menu);
+      }
+      return 0;
+
+    case WM_COMMAND:
+      if (LOWORD(wparam) == IDM_TRAY_SHOW) {
+        ShowWindow(hwnd, SW_SHOW);
+        SetForegroundWindow(hwnd);
+      } else if (LOWORD(wparam) == IDM_TRAY_EXIT) {
+        RemoveTrayIcon();
+        DestroyWindow(hwnd);
+      } else if (LOWORD(wparam) == IDM_TRAY_CONNECT ||
+                 LOWORD(wparam) == IDM_TRAY_DISCONNECT) {
+        // Handled by FlutterWindow subclass via method channel.
+      }
       return 0;
   }
 
@@ -270,6 +323,26 @@ bool Win32Window::OnCreate() {
 
 void Win32Window::OnDestroy() {
   // No-op; provided for subclasses.
+}
+
+void Win32Window::InitTrayIcon() {
+  if (tray_initialized_ || !window_handle_) return;
+  ZeroMemory(&nid_, sizeof(nid_));
+  nid_.cbSize = sizeof(nid_);
+  nid_.hWnd = window_handle_;
+  nid_.uID = 1;
+  nid_.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+  nid_.uCallbackMessage = WM_TRAYICON;
+  nid_.hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON));
+  wcscpy_s(nid_.szTip, L"Free Fast VPN");
+  Shell_NotifyIcon(NIM_ADD, &nid_);
+  tray_initialized_ = true;
+}
+
+void Win32Window::RemoveTrayIcon() {
+  if (!tray_initialized_) return;
+  Shell_NotifyIcon(NIM_DELETE, &nid_);
+  tray_initialized_ = false;
 }
 
 void Win32Window::UpdateTheme(HWND const window) {

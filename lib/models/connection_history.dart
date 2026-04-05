@@ -3,6 +3,7 @@ class ConnectionHistory {
   final String serverName;
   final String serverCountry;
   final String serverCountryFlag;
+  final String? serverFlagImageUrl;
   final String connectedAt;
   final String? disconnectedAt;
   final int? durationSeconds;
@@ -12,6 +13,7 @@ class ConnectionHistory {
     required this.serverName,
     required this.serverCountry,
     required this.serverCountryFlag,
+    this.serverFlagImageUrl,
     required this.connectedAt,
     this.disconnectedAt,
     this.durationSeconds,
@@ -23,6 +25,7 @@ class ConnectionHistory {
       serverName: json['server_name'],
       serverCountry: json['server_country'],
       serverCountryFlag: json['server_country_flag'],
+      serverFlagImageUrl: json['server_flag_image_url'],
       connectedAt: json['connected_at'],
       disconnectedAt: json['disconnected_at'],
       durationSeconds: json['duration_seconds'],

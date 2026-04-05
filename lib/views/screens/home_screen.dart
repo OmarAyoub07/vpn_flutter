@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 import '../widgets/flag_emoji.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_localizations.dart';
 import '../../controllers/home_controller.dart';
@@ -31,14 +33,28 @@ class _HomeScreenState extends State<HomeScreen>
   bool _initialized = false;
   String? _lastShownError;
 
+  static const _trayChannel = MethodChannel('com.app.vpn/tray');
+
   void _onControllerChanged() {
     if (!mounted) return;
     setState(() {});
+    _pushTrayStatus();
     final error = _controller?.errorMessage;
     if (error != null && error != _lastShownError) {
       _lastShownError = error;
       _showError(error);
     }
+  }
+
+  void _pushTrayStatus() {
+    final c = _controller;
+    if (c == null) return;
+    _trayChannel.invokeMethod('updateStatus', {
+      'connected': c.isConnected,
+      'server': c.selectedServer?.name ?? '',
+      'download': c.downloadSpeed,
+      'upload': c.uploadSpeed,
+    });
   }
 
   @override
@@ -72,6 +88,17 @@ class _HomeScreenState extends State<HomeScreen>
       }
 
       _initialized = true;
+
+      // Listen for tray icon connect/disconnect actions (Windows).
+      const trayChannel = MethodChannel('com.app.vpn/tray');
+      trayChannel.setMethodCallHandler((call) async {
+        if (!mounted || _controller == null) return;
+        if (call.method == 'connect' && !_controller!.isConnected && !_controller!.isConnecting) {
+          _onConnect();
+        } else if (call.method == 'disconnect' && _controller!.isConnected) {
+          _onDisconnect();
+        }
+      });
 
       if (session.isFirstLaunch) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -299,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
-      leading: FlagEmoji(countryCode: server.countryFlag, size: 28),
+      leading: FlagEmoji(countryCode: server.countryFlag, imageUrl: server.flagImageUrl, size: 28),
       title: Text(server.name, style: theme.textTheme.bodyLarge),
       subtitle: Text(
         '${server.activeConnections} active',
@@ -556,6 +583,9 @@ class _HomeScreenState extends State<HomeScreen>
       // Update remaining time from backend
       _controller?.updateRemainingSeconds(result.remainingSeconds);
 
+      // Persist user into session so referral code is available immediately
+      if (mounted) MyApp.setAppUser(context, result);
+
       // Save registration state
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('device_registered', true);
@@ -603,6 +633,13 @@ class _HomeScreenState extends State<HomeScreen>
       }
     } catch (_) {
       // Registration failed — will retry on next app launch
+    }
+  }
+
+  void _openStoreForRating() {
+    final ratingUrl = AppSession.of(context).appConfig?.ratingUrl ?? '';
+    if (ratingUrl.isNotEmpty) {
+      launchUrl(Uri.parse(ratingUrl), mode: LaunchMode.externalApplication);
     }
   }
 
@@ -837,50 +874,53 @@ class _HomeScreenState extends State<HomeScreen>
                             ],
                           ),
                           const SizedBox(height: 20),
-                          ZenGlassCard(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.amber
-                                        .withValues(alpha: 0.12),
+                          GestureDetector(
+                            onTap: _openStoreForRating,
+                            child: ZenGlassCard(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.amber
+                                          .withValues(alpha: 0.12),
+                                    ),
+                                    child: Icon(
+                                      Icons.star_rounded,
+                                      color: Colors.amber.shade600,
+                                      size: 20,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    Icons.star_rounded,
-                                    color: Colors.amber.shade600,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        l10n.get('enjoying_speed'),
-                                        style: theme.textTheme.titleSmall
-                                            ?.copyWith(
-                                          color:
-                                              theme.colorScheme.onSurface,
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          l10n.get('enjoying_speed'),
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                            color:
+                                                theme.colorScheme.onSurface,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        l10n.get('tap_to_rate'),
-                                        style: theme.textTheme.bodySmall,
-                                      ),
-                                    ],
+                                        Text(
+                                          l10n.get('tap_to_rate'),
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                Icon(
-                                  Icons.chevron_right_rounded,
-                                  color: AppColors.ash,
-                                ),
-                              ],
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: AppColors.ash,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],

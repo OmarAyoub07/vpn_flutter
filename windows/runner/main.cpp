@@ -25,9 +25,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
-  Win32Window::Point origin(10, 10);
-  Win32Window::Size size(1280, 720);
-  if (!window.Create(L"app", origin, size)) {
+  // Mobile-like portrait window, centered on screen
+  int ww = 420, wh = 780;
+  int sx = GetSystemMetrics(SM_CXSCREEN);
+  int sy = GetSystemMetrics(SM_CYSCREEN);
+  Win32Window::Point origin((sx - ww) / 2, (sy - wh) / 2);
+  Win32Window::Size size(ww, wh);
+  if (!window.Create(L"Free Fast VPN", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

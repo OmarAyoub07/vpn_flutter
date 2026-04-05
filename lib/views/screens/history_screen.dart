@@ -226,7 +226,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                     color: AppColors.mintTeal.withValues(alpha: 0.1),
                   ),
                   child: Center(
-                    child: FlagEmoji(countryCode: item.serverCountryFlag, size: 22),
+                    child: FlagEmoji(countryCode: item.serverCountryFlag, imageUrl: item.serverFlagImageUrl, size: 22),
                   ),
                 ),
                 const SizedBox(width: 16),

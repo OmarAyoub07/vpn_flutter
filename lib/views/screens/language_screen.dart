@@ -211,6 +211,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                           final name = lang['name'] as String;
                           final nameEn = lang['name_en'] as String;
                           final flagCode = lang['flag_code'] as String;
+                          final flagImageUrl = lang['flag_image_url'] as String?;
                           final isSelected = code == _selectedCode;
 
                           return AnimatedContainer(
@@ -238,7 +239,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                                 horizontal: 16,
                                 vertical: 2,
                               ),
-                              leading: FlagEmoji(countryCode: flagCode, size: 22),
+                              leading: FlagEmoji(countryCode: flagCode, imageUrl: flagImageUrl, size: 22),
                               title: Text(
                                 name,
                                 style: theme.textTheme.bodyLarge?.copyWith(
