@@ -8,10 +8,14 @@ class AppConfigResponse {
   final int adMinGapSeconds;
   final int referralRewardSeconds;
 
-  final String rewardedAdUnitId;
-  final String interstitialAdUnitId;
-  final String nativeAdUnitId;
-  final String bannerAdUnitId;
+  final String androidRewardedAdUnitId;
+  final String androidInterstitialAdUnitId;
+  final String androidNativeAdUnitId;
+  final String androidBannerAdUnitId;
+  final String iosRewardedAdUnitId;
+  final String iosInterstitialAdUnitId;
+  final String iosNativeAdUnitId;
+  final String iosBannerAdUnitId;
 
   final bool rewardedAdsEnabled;
   final bool interstitialAdsEnabled;
@@ -30,10 +34,14 @@ class AppConfigResponse {
     required this.maxAttachmentsPerFeedback,
     required this.adMinGapSeconds,
     required this.referralRewardSeconds,
-    required this.rewardedAdUnitId,
-    required this.interstitialAdUnitId,
-    required this.nativeAdUnitId,
-    required this.bannerAdUnitId,
+    required this.androidRewardedAdUnitId,
+    required this.androidInterstitialAdUnitId,
+    required this.androidNativeAdUnitId,
+    required this.androidBannerAdUnitId,
+    required this.iosRewardedAdUnitId,
+    required this.iosInterstitialAdUnitId,
+    required this.iosNativeAdUnitId,
+    required this.iosBannerAdUnitId,
     required this.rewardedAdsEnabled,
     required this.interstitialAdsEnabled,
     required this.nativeAdsEnabled,
@@ -43,6 +51,16 @@ class AppConfigResponse {
     required this.appleStoreUrl,
     required this.microsoftStoreUrl,
   });
+
+  /// Returns the ad unit IDs for the current platform.
+  String get rewardedAdUnitId =>
+      Platform.isIOS ? iosRewardedAdUnitId : androidRewardedAdUnitId;
+  String get interstitialAdUnitId =>
+      Platform.isIOS ? iosInterstitialAdUnitId : androidInterstitialAdUnitId;
+  String get nativeAdUnitId =>
+      Platform.isIOS ? iosNativeAdUnitId : androidNativeAdUnitId;
+  String get bannerAdUnitId =>
+      Platform.isIOS ? iosBannerAdUnitId : androidBannerAdUnitId;
 
   /// Returns the store URL for the current platform.
   String get storeUrl {
@@ -92,10 +110,14 @@ class AppConfigResponse {
       maxAttachmentsPerFeedback: json['max_attachments_per_feedback'] ?? 2,
       adMinGapSeconds: json['ad_min_gap_seconds'] ?? 180,
       referralRewardSeconds: json['referral_reward_seconds'] ?? 3600,
-      rewardedAdUnitId: json['rewarded_ad_unit_id'] ?? '',
-      interstitialAdUnitId: json['interstitial_ad_unit_id'] ?? '',
-      nativeAdUnitId: json['native_ad_unit_id'] ?? '',
-      bannerAdUnitId: json['banner_ad_unit_id'] ?? '',
+      androidRewardedAdUnitId: json['android_rewarded_ad_unit_id'] ?? '',
+      androidInterstitialAdUnitId: json['android_interstitial_ad_unit_id'] ?? '',
+      androidNativeAdUnitId: json['android_native_ad_unit_id'] ?? '',
+      androidBannerAdUnitId: json['android_banner_ad_unit_id'] ?? '',
+      iosRewardedAdUnitId: json['ios_rewarded_ad_unit_id'] ?? '',
+      iosInterstitialAdUnitId: json['ios_interstitial_ad_unit_id'] ?? '',
+      iosNativeAdUnitId: json['ios_native_ad_unit_id'] ?? '',
+      iosBannerAdUnitId: json['ios_banner_ad_unit_id'] ?? '',
       rewardedAdsEnabled: json['rewarded_ads_enabled'] ?? true,
       interstitialAdsEnabled: json['interstitial_ads_enabled'] ?? true,
       nativeAdsEnabled: json['native_ads_enabled'] ?? true,

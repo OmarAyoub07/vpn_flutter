@@ -41,7 +41,9 @@ To include all architectures, remove `--split-per-abi` and `--target-platform`.
 
 ### Windows
 
-**Requirements:** Windows 10/11, Visual Studio 2022 with "Desktop development with C++" workload. Must be run on a Windows machine.
+**Requirements:** Windows 10/11, Visual Studio 2022+ with "Desktop development with C++" workload, Developer Mode enabled.
+
+#### Build the app
 
 ```bash
 flutter build windows --release \
@@ -49,6 +51,28 @@ flutter build windows --release \
 ```
 
 Output: `build/windows/x64/runner/Release/`
+
+The app runs as administrator (required for WireGuard VPN tunnels).
+
+#### Create the installer
+
+**Requirements:** [Inno Setup 6](https://jrsoftware.org/isdl.php)
+
+```bash
+# Install Inno Setup (if not installed)
+winget install JRSoftware.InnoSetup
+
+# Build the installer
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\windows_setup.iss
+```
+
+Output: `build/installer/FreeFastVPN_Setup.exe`
+
+The installer provides:
+- Desktop shortcut (optional)
+- Start with Windows (optional)
+- Start Menu entry
+- Standard uninstaller
 
 ### iOS
 
