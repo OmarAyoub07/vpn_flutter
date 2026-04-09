@@ -11,7 +11,7 @@
 		<key>provisioningProfiles</key>
 		<dict>
 			<key>vpn.free.com</key>
-			<string>vpnprofile</string>
+			<string>vpn-profile</string>
 		</dict>
 		<key>uploadSymbols</key>
 		<true/>

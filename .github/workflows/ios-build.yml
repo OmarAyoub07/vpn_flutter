@@ -68,7 +68,7 @@ jobs:
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$PP_UUID.mobileprovision
 
           # Inject profile name into Xcode project
-          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = vpnprofile;/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"vpn-profile\";/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" ios/Runner.xcodeproj/project.pbxproj
 
       - name: Create .env file
         run: echo "${{ secrets.ENV_FILE }}" > .env
