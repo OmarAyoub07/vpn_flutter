@@ -73,6 +73,12 @@ jobs:
       - name: Create .env file
         run: echo "${{ secrets.ENV_FILE }}" > .env
 
+      - name: Strip alpha channel from app icon
+        run: |
+          # Convert PNG to JPEG (removes alpha) then back to PNG
+          sips -s format jpeg assets/launcher/icon.png --out $RUNNER_TEMP/icon_flat.jpg
+          sips -s format png $RUNNER_TEMP/icon_flat.jpg --out assets/launcher/icon.png
+
       - name: Clean project
         run: flutter clean
 
