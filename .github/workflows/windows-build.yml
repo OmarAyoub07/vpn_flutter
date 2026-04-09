@@ -1,0 +1,49 @@
+name: Flutter Windows Build
+
+on:
+  push:
+    branches:
+      - windows/release
+
+jobs:
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: OmarAyoub07/vpn_flutter
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.6'
+
+      - name: Create .env file
+        run: echo "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Create installer with Inno Setup
+        run: |
+          iscc windows/installer.iss
+        shell: cmd
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: build/windows/installer/*.exe
+
+      - name: Upload portable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: build/windows/x64/runner/Release/
