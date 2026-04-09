@@ -10,8 +10,8 @@
 		<string>manual</string>
 		<key>provisioningProfiles</key>
 		<dict>
-			<key>com.example.app</key>
-			<string>match AppStore com.example.app</string>
+			<key>vpn.free.com</key>
+			<string>vpnprofile</string>
 		</dict>
 		<key>uploadSymbols</key>
 		<true/>
