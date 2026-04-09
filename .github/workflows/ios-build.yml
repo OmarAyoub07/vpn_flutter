@@ -55,10 +55,20 @@ jobs:
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           echo -n "$PROVISIONING_PROFILE" | base64 --decode -o $PP_PATH
 
-          # Extract UUID from the profile and install with UUID filename
-          PP_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(/usr/bin/security cms -D -i $PP_PATH))
+          # Extract UUID and Name from the profile
+          PP_PLIST=$(/usr/bin/security cms -D -i $PP_PATH)
+          PP_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$PP_PLIST")
+          PP_NAME=$(/usr/libexec/PlistBuddy -c "Print Name" /dev/stdin <<< "$PP_PLIST")
+
+          echo "Profile UUID: $PP_UUID"
+          echo "Profile Name: $PP_NAME"
+
+          # Install with UUID filename
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$PP_UUID.mobileprovision
+
+          # Inject profile name into Xcode project
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = vpnprofile;/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" ios/Runner.xcodeproj/project.pbxproj
 
       - name: Create .env file
         run: echo "${{ secrets.ENV_FILE }}" > .env
