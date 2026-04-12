@@ -50,3 +50,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# WireGuardKit local package (cloned in CI)
+ios/wireguard-apple/
