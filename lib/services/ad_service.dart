@@ -15,6 +15,7 @@ class AdService {
   InterstitialAd? _interstitialAd;
   NativeAd? _nativeAd;
   bool _nativeAdLoaded = false;
+  bool _rewardedAdInProgress = false;
 
   /// Called when native ad load state changes so the UI can rebuild.
   VoidCallback? onNativeAdStateChanged;
@@ -78,30 +79,35 @@ class AdService {
   }) async {
     if (!isSupported) return true;
 
-    for (int i = 0; i < count; i++) {
-      if (_rewardedAd == null) {
-        await _waitForRewardedAd();
-        if (_rewardedAd == null) return false;
+    _rewardedAdInProgress = true;
+    try {
+      for (int i = 0; i < count; i++) {
+        if (_rewardedAd == null) {
+          await _waitForRewardedAd();
+          if (_rewardedAd == null) return false;
+        }
+
+        final completed = await _showSingleRewardedAd();
+        if (!completed) return false;
+
+        onProgress?.call(i + 1, count);
+
+        if (i < count - 1) {
+          _loadRewardedAd();
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
       }
-
-      final completed = await _showSingleRewardedAd();
-      if (!completed) return false;
-
-      onProgress?.call(i + 1, count);
-
-      if (i < count - 1) {
-        _loadRewardedAd();
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
+      _lastAdShownAt = DateTime.now();
+      _loadRewardedAd();
+      return true;
+    } finally {
+      _rewardedAdInProgress = false;
     }
-    _lastAdShownAt = DateTime.now();
-    _loadRewardedAd();
-    return true;
   }
 
   Future<void> _waitForRewardedAd() async {
     _loadRewardedAd();
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 10; i++) {
       await Future.delayed(const Duration(milliseconds: 500));
       if (_rewardedAd != null) return;
     }
@@ -162,6 +168,7 @@ class AdService {
   void showInterstitialIfEligible() {
     if (!isSupported) return;
     if (!config.interstitialAdsEnabled) return;
+    if (_rewardedAdInProgress) return;
     if (!_isGapSatisfied()) return;
     if (_interstitialAd == null) return;
 

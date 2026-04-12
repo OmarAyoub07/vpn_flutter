@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 /// Renders a country flag from an image URL, with emoji fallback.
@@ -26,12 +27,13 @@ class FlagEmoji extends StatelessWidget {
   Widget build(BuildContext context) {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return ClipOval(
-        child: Image.network(
-          imageUrl!,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl!,
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _emojiFallback(),
+          placeholder: (_, __) => SizedBox(width: size, height: size),
+          errorWidget: (_, __, ___) => _emojiFallback(),
         ),
       );
     }
