@@ -32,6 +32,8 @@ jobs:
           git clone --depth 1 https://github.com/WireGuard/wireguard-apple.git ios/wireguard-apple
           # Fix swift-tools-version: 5.3 uses .macOS(.v12)/.iOS(.v15) which require 5.5+
           sed -i '' 's/swift-tools-version:5.3/swift-tools-version:5.9/' ios/wireguard-apple/Package.swift
+          # Fix missing sys/types.h include for u_int32_t/u_char (required by newer SDK)
+          sed -i '' '1s/^/#include <sys\/types.h>\n/' ios/wireguard-apple/Sources/WireGuardKitC/WireGuardKitC.h
 
       - name: Build libwg-go.a for iOS
         run: |
