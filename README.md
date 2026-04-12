@@ -63,7 +63,7 @@ flutter build windows --release \
 
 Output: `build/windows/x64/runner/Release/`
 
-The app requires administrator privileges (UAC prompt) for WireGuard VPN tunnel management.
+The executable is named `FreeFastVPN.exe` and requires administrator privileges (UAC prompt) for WireGuard VPN tunnel management.
 
 #### 2. Create the installer
 
@@ -73,16 +73,15 @@ The app requires administrator privileges (UAC prompt) for WireGuard VPN tunnel 
 # Install Inno Setup (one-time)
 winget install JRSoftware.InnoSetup
 
-# Build the installer (the path may vary — check your Inno Setup install location)
-"C:\Users\<you>\AppData\Local\Programs\Inno Setup 6\ISCC.exe" installer\windows_setup.iss
+# Build the installer
+iscc windows/installer.iss
 ```
 
-Output: `build/installer/FreeFastVPN_Setup.exe` (~15 MB)
+Output: `build/windows/installer/FreeFastVPN-Setup.exe`
 
 The installer provides:
 - One-click install with UAC elevation
 - Desktop shortcut (optional)
-- Start with Windows (optional)
 - Start Menu entry
 - Standard Add/Remove Programs uninstaller
 
@@ -95,10 +94,11 @@ The installer provides:
 
 ### iOS
 
-**Requirements:** macOS, Xcode 15+, Apple Developer account. Must be built on macOS.
+**Requirements:** macOS, Xcode 15+, Apple Developer account, Go 1.22+ (for WireGuardKit). Must be built on macOS.
 
 ```bash
 flutter build ipa --release \
+  --export-options-plist=ios/ExportOptions.plist \
   --dart-define=BASE_URL=http://your-server:8000/api
 ```
 
@@ -107,12 +107,13 @@ Output: `build/ios/ipa/app.ipa`
 #### iOS setup checklist
 
 Before building for iOS:
-1. Open `ios/Runner.xcworkspace` in Xcode
-2. Set the **Bundle Identifier** (replace `com.example.app`)
-3. Configure **Signing & Capabilities** with your Apple Developer team
-4. Add **Network Extension** capability (required for WireGuard VPN)
-5. Replace the test **GADApplicationIdentifier** in `ios/Runner/Info.plist` with your production AdMob App ID
-6. Run `flutter build ipa --release --dart-define=BASE_URL=...`
+1. Register two App IDs in Apple Developer portal:
+   - `vpn.free.com` (main app) — enable Network Extensions + Personal VPN
+   - `vpn.free.com.network-extension` (tunnel extension) — enable Network Extensions
+2. Create provisioning profiles for both identifiers
+3. Open `ios/Runner.xcworkspace` in Xcode and verify signing settings
+4. Replace the test **GADApplicationIdentifier** in `ios/Runner/Info.plist` with your production AdMob App ID
+5. Build with `flutter build ipa --release --export-options-plist=ios/ExportOptions.plist --dart-define=BASE_URL=...`
 
 ## Project Structure
 
@@ -128,12 +129,11 @@ lib/
     widgets/        Flag emoji, side menu, title bar, glass cards, pulse orb
 plugins/
   wireguard_flutter/  Local patched copy of wireguard_flutter (Windows service fix)
+ios/
+  VPNExtension/     Packet Tunnel Provider for WireGuard VPN on iOS
 windows/
   runner/           Native Windows code (frameless window, system tray, method channel)
-installer/
-  windows_setup.iss Inno Setup installer script
-tool/
-  png_to_ico.dart   Dart script to convert PNG icon to Windows ICO format
+  installer.iss     Inno Setup installer script
 ```
 
 ## Backend API
@@ -157,9 +157,22 @@ The app expects these backend endpoints:
 
 Ad unit IDs in `/api/config/` are platform-specific: `android_rewarded_ad_unit_id`, `ios_rewarded_ad_unit_id`, etc.
 
+## CI/CD
+
+Three GitHub Actions workflows build and deploy automatically on push to release branches:
+
+| Workflow | Branch | Output |
+|----------|--------|--------|
+| `android-build.yml` | `android/release` | APK artifacts |
+| `ios-build.yml` | `ios/release` | IPA → App Store Connect |
+| `windows-build.yml` | `windows/release` | Installer + portable build |
+
+All Flutter development happens on `master`. To deploy, merge master into the target release branch.
+
 ## Notes
 
-- Flag images are loaded from the backend (`flag_image_url`) to avoid bundling flag assets
+- Flag images are loaded from the backend (`flag_image_url`) with local caching via `cached_network_image`
 - Ads use Google AdMob (Android/iOS only) — Windows skips ads gracefully
 - The WireGuard plugin is a local patched copy under `plugins/` to fix Windows service management
-- The app uses `--dart-define` for the API URL — there is no `.env` file at runtime
+- iOS VPN uses a Network Extension (Packet Tunnel Provider) with WireGuardKit
+- The app uses `--dart-define-from-file` in CI for the API URL — there is no `.env` file at runtime

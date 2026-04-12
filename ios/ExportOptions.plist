@@ -9,7 +9,9 @@
 		<key>provisioningProfiles</key>
 		<dict>
 			<key>vpn.free.com</key>
-			<string>vpn-profile</string>
+			<string>vpnfreecom</string>
+			<key>vpn.free.com.network-extension</key>
+			<string>vpnfreecomnetworkextension</string>
 		</dict>
 		<key>uploadSymbols</key>
 		<true/>
