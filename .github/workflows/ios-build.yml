@@ -92,7 +92,8 @@ jobs:
           flutter build ipa \
             --release \
             --build-number=$(( ${{ github.run_number }} + 100 )) \
-            --export-options-plist=ios/ExportOptions.plist
+            --export-options-plist=ios/ExportOptions.plist \
+            --dart-define-from-file=.env
 
       - name: Upload to App Store Connect
         run: |
