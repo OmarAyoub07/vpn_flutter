@@ -68,8 +68,7 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH login.keychain-db
 
       - name: Verify certificate
-        run: |
-          security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db
+        run: security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db
 
       - name: Install Provisioning Profile
         env:
@@ -112,17 +111,17 @@ jobs:
       - name: Create .env file
         run: echo "${{ secrets.ENV_FILE }}" > .env
 
-      - name: Strip alpha channel from app icon
-        run: |
-          sips -s format jpeg assets/launcher/icon.png --out $RUNNER_TEMP/icon_flat.jpg
-          sips -s format png $RUNNER_TEMP/icon_flat.jpg --out assets/launcher/icon.png
-          dart run flutter_launcher_icons
-
       - name: Clean project
         run: flutter clean
 
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Strip alpha channel from app icon
+        run: |
+          sips -s format jpeg assets/launcher/icon.png --out $RUNNER_TEMP/icon_flat.jpg
+          sips -s format png $RUNNER_TEMP/icon_flat.jpg --out assets/launcher/icon.png
+          dart run flutter_launcher_icons
 
       - name: Build IPA
         run: |
@@ -148,5 +147,4 @@ jobs:
 
       - name: Clean up keychain
         if: ${{ always() }}
-        run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
