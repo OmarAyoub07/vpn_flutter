@@ -25,4 +25,4 @@ Name: "{autodesktop}\Free Fast VPN"; Filename: "{app}\app.exe"; Tasks: desktopic
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"
 
 [Run]
-Filename: "{app}\app.exe"; Description: "Launch Free Fast VPN"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\app.exe"; Description: "Launch Free Fast VPN"; Flags: nowait postinstall skipifsilent shellexec
