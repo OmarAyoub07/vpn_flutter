@@ -811,8 +811,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/WireGuard/wireguard-apple.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				kind = exactVersion;
+				version = "1.0.16-27";
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
