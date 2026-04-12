@@ -88,6 +88,8 @@ jobs:
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$PP_UUID.mobileprovision
 
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"vpnfreecom\";/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" ios/Runner.xcodeproj/project.pbxproj
+          # Also update ExportOptions.plist
+          sed -i '' "s|<string>vpnfreecom</string>|<string>$PP_NAME</string>|" ios/ExportOptions.plist
 
       - name: Install Network Extension Provisioning Profile
         env:
@@ -107,6 +109,8 @@ jobs:
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$PP_UUID.mobileprovision
 
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"vpnfreecomnetworkextension\";/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" ios/Runner.xcodeproj/project.pbxproj
+          # Also update ExportOptions.plist
+          sed -i '' "s|<string>vpnfreecomnetworkextension</string>|<string>$PP_NAME</string>|" ios/ExportOptions.plist
 
       - name: Create .env file
         run: echo "${{ secrets.ENV_FILE }}" > .env
