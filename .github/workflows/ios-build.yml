@@ -34,6 +34,9 @@ jobs:
           sed -i '' 's/swift-tools-version:5.3/swift-tools-version:5.9/' ios/wireguard-apple/Package.swift
           # Fix missing sys/types.h include for u_int32_t/u_char (required by newer SDK)
           sed -i '' '1s/^/#include <sys\/types.h>\n/' ios/wireguard-apple/Sources/WireGuardKitC/WireGuardKitC.h
+          # Copy wgQuickConfig parser + helper (in Shared, not in WireGuardKit SPM target)
+          cp ios/wireguard-apple/Sources/Shared/Model/TunnelConfiguration+WgQuickConfig.swift ios/VPNExtension/
+          cp ios/wireguard-apple/Sources/Shared/Model/String+ArrayConversion.swift ios/VPNExtension/
 
       - name: Build libwg-go.a for iOS
         run: |

@@ -16,6 +16,8 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		F1A2B3C400000000000AA020 /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C400000000000AA001 /* PacketTunnelProvider.swift */; };
+		F1A2B3C400000000000AA023 /* TunnelConfiguration+WgQuickConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C400000000000AA006 /* TunnelConfiguration+WgQuickConfig.swift */; };
+		F1A2B3C400000000000AA024 /* String+ArrayConversion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C400000000000AA007 /* String+ArrayConversion.swift */; };
 		F1A2B3C400000000000AA021 /* VPNExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = F1A2B3C400000000000AA005 /* VPNExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F1A2B3C400000000000AA022 /* WireGuardKit in Frameworks */ = {isa = PBXBuildFile; productRef = F1A2B3C400000000000AA071 /* WireGuardKit */; };
 /* End PBXBuildFile section */
@@ -81,6 +83,8 @@
 		F1A2B3C400000000000AA001 /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
 		F1A2B3C400000000000AA002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1A2B3C400000000000AA003 /* VPNExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VPNExtension.entitlements; sourceTree = "<group>"; };
+		F1A2B3C400000000000AA006 /* TunnelConfiguration+WgQuickConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TunnelConfiguration+WgQuickConfig.swift"; sourceTree = "<group>"; };
+		F1A2B3C400000000000AA007 /* String+ArrayConversion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+ArrayConversion.swift"; sourceTree = "<group>"; };
 		F1A2B3C400000000000AA004 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		F1A2B3C400000000000AA005 /* VPNExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VPNExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -165,6 +169,8 @@
 			isa = PBXGroup;
 			children = (
 				F1A2B3C400000000000AA001 /* PacketTunnelProvider.swift */,
+				F1A2B3C400000000000AA006 /* TunnelConfiguration+WgQuickConfig.swift */,
+				F1A2B3C400000000000AA007 /* String+ArrayConversion.swift */,
 				F1A2B3C400000000000AA002 /* Info.plist */,
 				F1A2B3C400000000000AA003 /* VPNExtension.entitlements */,
 			);
@@ -357,6 +363,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1A2B3C400000000000AA020 /* PacketTunnelProvider.swift in Sources */,
+				F1A2B3C400000000000AA023 /* TunnelConfiguration+WgQuickConfig.swift in Sources */,
+				F1A2B3C400000000000AA024 /* String+ArrayConversion.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
