@@ -237,10 +237,15 @@ class AdService {
     if (!config.nativeAdsEnabled || !_nativeAdLoaded || _nativeAd == null) {
       return null;
     }
-    return SizedBox(
-      width: double.infinity,
-      height: 100,
-      child: AdWidget(ad: _nativeAd!),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: 120,
+        minWidth: 120,
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        child: AdWidget(ad: _nativeAd!),
+      ),
     );
   }
 

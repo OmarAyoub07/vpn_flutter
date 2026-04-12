@@ -138,7 +138,7 @@ PersistentKeepalive = 25
         await _wireguard.startVpn(
           serverAddress: config.endpoint.split(':').first,
           wgQuickConfig: wgConfig,
-          providerBundleIdentifier: 'com.app.vpn',
+          providerBundleIdentifier: 'vpn.free.com.network-extension',
         );
         return;
       } catch (e) {
