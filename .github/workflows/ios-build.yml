@@ -27,6 +27,12 @@ jobs:
         with:
           go-version: '1.22'
 
+      - name: Pre-build WireGuardKit Go library
+        run: |
+          git clone --depth 1 https://github.com/WireGuard/wireguard-apple.git $RUNNER_TEMP/wireguard-apple
+          cd $RUNNER_TEMP/wireguard-apple/Sources/WireGuardKitGo
+          make
+
       - name: Migrate to UIScene lifecycle
         run: flutter config --enable-uiscene-migration
 
