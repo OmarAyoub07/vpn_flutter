@@ -1,5 +1,7 @@
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
 import '../widgets/flag_emoji.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _pushTrayStatus() {
+    if (kIsWeb || !Platform.isWindows) return;
     final c = _controller;
     if (c == null) return;
     _trayChannel.invokeMethod('updateStatus', {
