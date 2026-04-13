@@ -32,9 +32,13 @@ class AdService {
 
   void initialize() {
     if (!isSupported) return;
-    MobileAds.instance.initialize();
-    _preloadAds();
-    _startRandomAdTimer();
+    try {
+      MobileAds.instance.initialize();
+      _preloadAds();
+      _startRandomAdTimer();
+    } catch (e) {
+      debugPrint('AdService: initialization failed: $e');
+    }
   }
 
   void _preloadAds() {
@@ -60,14 +64,16 @@ class AdService {
 
   void _loadRewardedAd() {
     if (!isSupported) return;
-    RewardedAd.load(
-      adUnitId: config.rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) => _rewardedAd = ad,
-        onAdFailedToLoad: (error) => _rewardedAd = null,
-      ),
-    );
+    try {
+      RewardedAd.load(
+        adUnitId: config.rewardedAdUnitId,
+        request: const AdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) => _rewardedAd = ad,
+          onAdFailedToLoad: (error) => _rewardedAd = null,
+        ),
+      );
+    } catch (_) {}
   }
 
   /// Show [count] sequential rewarded ads. Returns true if all were completed.
@@ -141,14 +147,16 @@ class AdService {
 
   void _loadInterstitialAd() {
     if (!isSupported) return;
-    InterstitialAd.load(
-      adUnitId: config.interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) => _interstitialAd = ad,
+    try {
+      InterstitialAd.load(
+        adUnitId: config.interstitialAdUnitId,
+        request: const AdRequest(),
+        adLoadCallback: InterstitialAdLoadCallback(
+          onAdLoaded: (ad) => _interstitialAd = ad,
         onAdFailedToLoad: (error) => _interstitialAd = null,
       ),
     );
+    } catch (_) {}
   }
 
   final Random _random = Random();
@@ -210,25 +218,27 @@ class AdService {
 
   void _loadNativeAd() {
     if (!isSupported) return;
-    _nativeAd = NativeAd(
-      adUnitId: config.nativeAdUnitId,
-      request: const AdRequest(),
-      listener: NativeAdListener(
-        onAdLoaded: (ad) {
-          _nativeAdLoaded = true;
-          onNativeAdStateChanged?.call();
-        },
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-          _nativeAd = null;
-          _nativeAdLoaded = false;
-          onNativeAdStateChanged?.call();
-        },
-      ),
-      nativeTemplateStyle: NativeTemplateStyle(
-        templateType: TemplateType.small,
-      ),
-    )..load();
+    try {
+      _nativeAd = NativeAd(
+        adUnitId: config.nativeAdUnitId,
+        request: const AdRequest(),
+        listener: NativeAdListener(
+          onAdLoaded: (ad) {
+            _nativeAdLoaded = true;
+            onNativeAdStateChanged?.call();
+          },
+          onAdFailedToLoad: (ad, error) {
+            ad.dispose();
+            _nativeAd = null;
+            _nativeAdLoaded = false;
+            onNativeAdStateChanged?.call();
+          },
+        ),
+        nativeTemplateStyle: NativeTemplateStyle(
+          templateType: TemplateType.small,
+        ),
+      )..load();
+    } catch (_) {}
   }
 
   /// Returns a native ad widget if loaded, or null.
