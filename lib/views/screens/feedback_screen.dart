@@ -67,7 +67,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     final List<XFile> selectedImages = await _picker.pickMultiImage();
     if (selectedImages.isNotEmpty) {
       setState(() {
-        final remainingSlots = 2 - _attachments.length;
+        final remainingSlots = maxFiles - _attachments.length;
         _attachments.addAll(selectedImages.take(remainingSlots));
       });
     }

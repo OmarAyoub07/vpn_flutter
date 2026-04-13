@@ -55,7 +55,8 @@ class FeedbackService {
       debugPrint('Feedback create: ${createResponse.statusCode}');
       if (createResponse.statusCode != 201) return false;
 
-      final feedbackId = jsonDecode(createResponse.body)['id'];
+      final feedbackId = jsonDecode(createResponse.body)['id'] as int?;
+      if (feedbackId == null) return false;
 
       // Upload attachments to separate endpoint
       final uploadUri = Uri.parse('${Env.baseUrl}/feedback/$feedbackId/attachments/');

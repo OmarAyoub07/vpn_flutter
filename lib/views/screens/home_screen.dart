@@ -111,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     final lang = AppLocalizations.of(context).languageCode;
-    if (lang != _currentLang) {
+    if (lang != _currentLang && _controller != null) {
       _currentLang = lang;
       _controller!.loadServers(langCode: lang);
     }

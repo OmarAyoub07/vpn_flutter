@@ -63,10 +63,14 @@ public class WireguardFlutterPlugin: NSObject, FlutterPlugin {
                 self.disconnect(result: result)
                 break;
             case "start":
-                 let serverAddress: String? = (call.arguments as? [String: Any])?["serverAddress"] as? String
-                 let wgQuickConfig: String? = (call.arguments as? [String: Any])?["wgQuickConfig"] as? String
-                 let providerBundleIdentifier: String? = (call.arguments as? [String: Any])?["providerBundleIdentifier"] as? String
-              self.connect(serverAddress: serverAddress!, wgQuickConfig: wgQuickConfig!,providerBundleIdentifier: providerBundleIdentifier!, result: result)
+                 let serverAddress = (call.arguments as? [String: Any])?["serverAddress"] as? String
+                 let wgQuickConfig = (call.arguments as? [String: Any])?["wgQuickConfig"] as? String
+                 let providerBundleIdentifier = (call.arguments as? [String: Any])?["providerBundleIdentifier"] as? String
+                 guard let sa = serverAddress, let wg = wgQuickConfig, let pbi = providerBundleIdentifier else {
+                     result(FlutterError(code: "-5", message: "Missing start arguments", details: nil))
+                     return
+                 }
+                 self.connect(serverAddress: sa, wgQuickConfig: wg, providerBundleIdentifier: pbi, result: result)
                 break;
             case "dispose":
                 self.initialized = false

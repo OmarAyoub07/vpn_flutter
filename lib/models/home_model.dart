@@ -60,7 +60,7 @@ class HomeModel {
       // 1. Register — get keys and IP (backend is reachable, VPN is off)
       final config = await _api.register(serverId);
       currentConfig = config;
-      clientPublicKey = config.serverPublicKey;
+      clientPublicKey = config.clientPublicKey;
 
       // 2. POST /connect/ BEFORE starting VPN — backend is still reachable
       //    This creates the history record and returns its ID

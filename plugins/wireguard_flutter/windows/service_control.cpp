@@ -328,7 +328,6 @@ namespace wireguard_flutter
     if (service == NULL)
     {
       CloseServiceHandle(service_manager);
-      CloseServiceHandle(service);
       return "disconnected";
     }
 
