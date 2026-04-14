@@ -25,7 +25,8 @@ class AdService {
   /// Returns true only on Android and iOS where AdMob is supported.
   static bool get isSupported {
     if (kIsWeb) return false;
-    return Platform.isAndroid || Platform.isIOS;
+    // TODO: Re-enable iOS ads after upgrading google_mobile_ads to 7.x
+    return Platform.isAndroid;
   }
 
   Timer? _randomAdTimer;
