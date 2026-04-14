@@ -20,7 +20,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
 
   static bool get _isSupported {
     if (kIsWeb) return false;
-    return Platform.isAndroid;
+    return Platform.isAndroid || Platform.isIOS;
   }
 
   @override
