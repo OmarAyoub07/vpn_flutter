@@ -1,8 +1,10 @@
 import 'dart:io' show Platform;
 import 'dart:ui' as ui;
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/app_localizations.dart';
@@ -16,6 +18,15 @@ import 'views/widgets/window_title_bar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize ads SDK early (before any ad loads)
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    if (Platform.isIOS) {
+      // Request App Tracking Transparency authorization on iOS 14+
+      await AppTrackingTransparency.requestTrackingAuthorization();
+    }
+    await MobileAds.instance.initialize();
+  }
 
   final prefs = await SharedPreferences.getInstance();
   final savedLang = prefs.getString('language');

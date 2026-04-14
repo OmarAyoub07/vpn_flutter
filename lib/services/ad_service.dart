@@ -32,13 +32,9 @@ class AdService {
 
   void initialize() {
     if (!isSupported) return;
-    try {
-      MobileAds.instance.initialize();
-      _preloadAds();
-      _startRandomAdTimer();
-    } catch (e) {
-      debugPrint('AdService: initialization failed: $e');
-    }
+    // MobileAds.instance.initialize() is called in main.dart before runApp
+    _preloadAds();
+    _startRandomAdTimer();
   }
 
   void _preloadAds() {
